@@ -38,8 +38,13 @@ public static class ContentLoader
         var terrain = LoadTerrain(Path.Combine(contentDir, "terrain.csv"));
         var features = LoadFeatures(Path.Combine(contentDir, "features.csv"));
         var units = LoadUnits(Path.Combine(contentDir, "units.csv"));
+        var moves = MovesLoader.Load(Path.Combine(contentDir, "moves.json"));
         var rules = RulesLoader.Load(Path.Combine(contentDir, "rules.json"));
-        return new GameData(terrain, features, units, rules, HashContent(contentDir));
+        foreach (var unit in units)
+            foreach (string move in unit.Moves)
+                if (!moves.Any(m => m.Id == move))
+                    throw new ContentException($"units.csv: {unit.Id} has a move '{move}' that isn't in moves.json");
+        return new GameData(terrain, features, units, moves, rules, HashContent(contentDir));
     }
 
     /// <summary>

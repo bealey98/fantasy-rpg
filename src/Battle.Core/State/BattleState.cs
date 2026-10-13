@@ -59,6 +59,12 @@ public sealed class BattleState
     /// <summary>Event counter, so every event in a battle has its own sequence number.</summary>
     public int Seq;
 
+    /// <summary>
+    /// The acting unit as it was just before its turn started, so swapping the party order before
+    /// anyone has acted can undo the start of that turn exactly.
+    /// </summary>
+    public Unit TurnStartBackup;
+
     /// <summary>Where events go. Not part of the state proper: copies get the null sink.</summary>
     public IEventSink Sink = NullSink.Instance;
 
@@ -120,6 +126,7 @@ public sealed class BattleState
         DarkUses = other.DarkUses;
         Rng = other.Rng;
         Seq = other.Seq;
+        TurnStartBackup = other.TurnStartBackup;
     }
 
     /// <summary>A full, independent copy. Events from the copy go nowhere unless you give it a sink.</summary>

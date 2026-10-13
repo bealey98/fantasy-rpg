@@ -13,6 +13,9 @@ public static class TestContent
     });
 
     public static string Dir => Loaded.Value.Dir;
+
+    /// <summary>The repository root: the folder holding Battle.sln.</summary>
+    public static string RepoRoot => Path.GetDirectoryName(Dir)!;
     public static GameData Data => Loaded.Value.Data;
 
     public static ArenaDef Arena(string name) => ContentLoader.LoadArena(Dir, name, Data);

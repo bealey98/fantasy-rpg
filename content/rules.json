@@ -5,5 +5,19 @@
   "climb_cost": 1,
 
   // Movement per level when using a ladder to climb or descend two or more levels.
-  "ladder_cost_per_level": 1
+  "ladder_cost_per_level": 1,
+
+  // Melee reaches a neighbouring tile at most this many levels higher or lower.
+  "melee_max_height_diff": 1,
+
+  // A battle still going after this many rounds is a draw.
+  "round_cap": 30,
+
+  // Simulated timing for each skill level: chance in 100 of [fumble, good, perfect].
+  // Used by the simulator, and by terminal play until the real timing minigames exist.
+  "timing_skill": {
+    "novice": [40, 50, 10],
+    "average": [20, 60, 20],
+    "expert": [5, 45, 50]
+  }
 }

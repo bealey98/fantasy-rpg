@@ -1,0 +1,19 @@
+// Every move in the game. The rules for each kind live in code; the numbers live here.
+// Keys you can use (all optional except id, name, slot and kind):
+//   slot: main, bonus or special (special uses both)    kind: which rule handles it
+//   damage, range (tiles), height_bonus, needs_sight, command (has an action command)
+//   push, charge, status + status_rounds, self_status + self_status_rounds, gang_up
+//   element, source (light or dark), dark_cost, rounds, radius, amount, mount, variant, tier, upgraded
+//   text: one line shown to the player
+[
+  {
+    "id": "strike", "name": "Strike", "slot": "main", "kind": "melee",
+    "damage": 2, "command": true,
+    "text": "A weapon hit on a neighbouring enemy."
+  },
+  {
+    "id": "shiv", "name": "Shiv", "slot": "main", "kind": "melee",
+    "damage": 2,
+    "text": "A rusty stab at a neighbouring enemy."
+  }
+]

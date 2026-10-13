@@ -128,9 +128,40 @@ public static class BattleFactory
     }
 }
 
-/// <summary>Works out each unit's moves. Moves arrive in step 4; until then every kit is empty.</summary>
+/// <summary>Works out each unit's moves: the hero's from the encounter's loadout, everyone else's from units.csv.</summary>
 public static class Kits
 {
-    public static int[][] Build(GameData data, EncounterDef encounter, UnitDef[] units) =>
-        units.Select(_ => Array.Empty<int>()).ToArray();
+    public static int[][] Build(GameData data, EncounterDef encounter, UnitDef[] units)
+    {
+        var kits = new int[units.Length][];
+        for (int i = 0; i < units.Length; i++)
+        {
+            var ids = units[i].Has(UnitTags.Hero) ? HeroLoadout(encounter.Party).ToList() : units[i].Moves.ToList();
+            kits[i] = ids.Select(id => data.MoveById(id)?.Index
+                ?? throw new ArgumentException($"{units[i].Name} has a move '{id}' that isn't in moves.json")).ToArray();
+        }
+        return kits;
+    }
+
+    /// <summary>
+    /// The hero's moves: his weapon moves, then the Elderwood's moves for his tier.
+    /// Tier 1 has Tether and Bind. At Tier 2, Tether splits into a light pull and a dark sap,
+    /// and Bind gets its normal upgrade.
+    /// </summary>
+    public static IEnumerable<string> HeroLoadout(PartySetup party)
+    {
+        foreach (string move in party.WeaponMain) yield return move;
+        if (party.WeaponBonus.Length > 0) yield return party.WeaponBonus;
+        if (party.ElderwoodTier == 1)
+        {
+            yield return "tether";
+            yield return "bind";
+        }
+        else if (party.ElderwoodTier >= 2)
+        {
+            yield return "tether_pull";
+            yield return "tether_sap";
+            yield return "bind_2";
+        }
+    }
 }

@@ -36,6 +36,86 @@ public static class AsciiRender
     }
 
     /// <summary>
+    /// A battle in progress. Units show as their letters (H hero, L Loper, a b c enemies; a mounted
+    /// pair shows as H), traps as ^, rumbling ground as !, and dead features dimmed.
+    /// <paramref name="marked"/> highlights tiles: reachable tiles or a danger zone.
+    /// </summary>
+    public static string Board(BattleState s, bool[]? marked, bool colour, string[]? sidePanel = null)
+    {
+        var cells = new Cell[s.TileCount];
+        for (int i = 0; i < cells.Length; i++)
+        {
+            char glyph;
+            string? fg = null;
+            int unit = s.Occupant[i];
+            if (unit >= 0)
+            {
+                int shown = s.Units[unit].Rider >= 0 ? s.Units[unit].Rider : unit;
+                glyph = UnitGlyph(s, shown);
+                fg = s.Units[shown].Side == Side.Party ? Ansi.Party : Ansi.Enemy;
+            }
+            else if (s.Rumble[i] >= 0) { glyph = '!'; fg = Ansi.Warn; }
+            else if (s.Trap[i] != TrapKind.None) { glyph = '^'; fg = Ansi.Warn; }
+            else if (s.Feature[i] >= 0)
+            {
+                glyph = s.FeatureAt(i)!.Glyph;
+                fg = s.FeatureDead[i] ? Ansi.Dim : Ansi.Feature;
+            }
+            else glyph = s.TerrainAt(i).Glyph;
+            cells[i] = new Cell(glyph, s.Heights[i], colour || Ansi.Enabled ? fg : null, marked != null && marked[i]);
+        }
+        return Grid(s.Width, s.Height, cells, colour, sidePanel);
+    }
+
+    public static char UnitGlyph(BattleState s, int unit) =>
+        unit == s.Info.HeroIndex ? 'H' : unit == s.Info.LoperIndex ? 'L' : s.Label(unit)[0];
+
+    /// <summary>One line per unit: name, an HP bar and its statuses.</summary>
+    public static string[] UnitPanel(BattleState s)
+    {
+        var lines = new List<string>();
+        int nameWidth = Enumerable.Range(0, s.Units.Length).Max(i => Describe.Name(s, i).Length);
+        for (int i = 0; i < s.Units.Length; i++)
+        {
+            ref var u = ref s.Units[i];
+            string name = Describe.Name(s, i).PadRight(nameWidth);
+            if (!u.Alive)
+            {
+                string why = u.Has(UnitFlags.Fled) ? "fled" : u.Has(UnitFlags.KnockedOut) ? "knocked out" : "defeated";
+                lines.Add($"{name}  {why}");
+                continue;
+            }
+            int filled = (int)Math.Round(10.0 * u.Hp / u.MaxHp);
+            string bar = new string('█', filled) + new string('░', 10 - filled);
+            lines.Add($"{name}  {bar} {u.Hp,2}/{u.MaxHp,-2} {Statuses(s, i)}".TrimEnd());
+        }
+        return lines.ToArray();
+    }
+
+    public static string Statuses(BattleState s, int i)
+    {
+        ref var u = ref s.Units[i];
+        var parts = new List<string>();
+        void Timed(string name, int timer) { if (timer > 0) parts.Add($"{name} {(timer + 1) / 2}"); }
+        Timed("rooted", u.Rooted);
+        Timed("slowed", u.Slowed);
+        Timed("blinded", u.Blinded);
+        Timed("braced", u.Braced);
+        Timed("taunted", u.Taunted);
+        if (u.BuffAmount > 0) parts.Add($"+{u.BuffAmount} next hit");
+        if (u.Has(UnitFlags.Dazed)) parts.Add("dazed");
+        if (u.Has(UnitFlags.KnockedOver)) parts.Add("knocked over");
+        if (u.Has(UnitFlags.ParryReady)) parts.Add("parrying");
+        if (u.Has(UnitFlags.WeaponBind)) parts.Add("weapon bind");
+        if (u.Has(UnitFlags.Burrowed)) parts.Add($"burrowed → {u.BurrowTo}");
+        if (u.Has(UnitFlags.Fleeing)) parts.Add("fleeing");
+        if (u.MountedOn >= 0) parts.Add($"riding {Describe.Name(s, u.MountedOn)}");
+        for (int t = 0; t < s.TetherCount; t++)
+            if (s.Tethers[t].Involves(i)) parts.Add("tethered");
+        return string.Join(", ", parts);
+    }
+
+    /// <summary>
     /// The board itself, with column and row numbers. Without colour, heights are printed as a
     /// second grid to the right; with colour, each tile's background is shaded by height.
     /// </summary>

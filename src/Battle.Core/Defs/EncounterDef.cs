@@ -25,13 +25,13 @@ public sealed class EncounterDef
 public sealed class PartySetup
 {
     /// <summary>Main weapon moves (two slots).</summary>
-    public IReadOnlyList<string> WeaponMain { get; init; } = ["strike", "bull_rush"];
+    public IReadOnlyList<string> WeaponMain { get; init; } = ["strike"];
 
-    /// <summary>The bonus weapon move (one slot): "shove" or "parry".</summary>
-    public string WeaponBonus { get; init; } = "shove";
+    /// <summary>The bonus weapon move (one slot): "shove" or "parry". Empty for none.</summary>
+    public string WeaponBonus { get; init; } = "";
 
-    /// <summary>The Elderwood's tier: 1 at the start of the game, 2 after its chapter.</summary>
-    public int ElderwoodTier { get; init; } = 1;
+    /// <summary>The Elderwood's tier: 1 at the start of the game, 2 after its chapter, 0 for none (tests only).</summary>
+    public int ElderwoodTier { get; init; }
 
     /// <summary>Whether the Loper is in the fight.</summary>
     public bool Loper { get; init; } = true;

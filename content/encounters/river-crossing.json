@@ -1,0 +1,7 @@
+// A small test fight on the plan's example arena: two goblins against the hero and the Loper.
+{
+  "arena": "river-crossing",
+  "enemies": { "a": "cutter", "b": "cutter" },
+  "party": { "weapon_main": ["strike"], "loper": true },
+  "first_phase": "party"
+}
