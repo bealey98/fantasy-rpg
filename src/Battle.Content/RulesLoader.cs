@@ -26,6 +26,8 @@ public static class RulesLoader
         ["unit_collision_damage"] = (r, v, k) => r.UnitCollisionDamage = Int(v, k),
         ["fall_damage_per_level"] = (r, v, k) => r.FallDamagePerLevel = Int(v, k),
         ["edges_are_walls"] = (r, v, k) => r.EdgesAreWalls = Bool(v, k),
+        ["source_range"] = (r, v, k) => r.SourceRange = Int(v, k),
+        ["tether_max_length"] = (r, v, k) => r.TetherMaxLength = Int(v, k),
     };
 
     /// <summary>{"fumble": 0, "good": 1, "perfect": 2} as [0, 1, 2].</summary>

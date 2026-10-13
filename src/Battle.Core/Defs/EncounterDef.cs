@@ -31,7 +31,7 @@ public sealed class PartySetup
     public string WeaponBonus { get; init; } = "shove";
 
     /// <summary>The Elderwood's tier: 1 at the start of the game, 2 after its chapter, 0 for none (tests only).</summary>
-    public int ElderwoodTier { get; init; }
+    public int ElderwoodTier { get; init; } = 1;
 
     /// <summary>Whether the Loper is in the fight.</summary>
     public bool Loper { get; init; } = true;

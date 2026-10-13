@@ -62,7 +62,7 @@ public static partial class Rules
             if (s.Occupant[tile] >= 0) { hitUnit = s.Occupant[tile]; break; }
             int dh = s.Heights[tile] - s.Heights[s.Idx(pos)];
             if (dh >= 1) { hitObject = "a bank"; break; }
-            if (!TetherAllows(s, body, next)) break;
+            if (!TetherAllows(s, body, pos, next)) break;
 
             pos = next;
             moved++;

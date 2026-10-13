@@ -240,9 +240,26 @@ public sealed class Game
             var items = moves.Select((m, i) => $"{i + 1} {m.Label}{(m.Options.Count > 1 ? $" [{m.Options.Count}]" : "")}").ToList();
             items.Add("e End turn");
             sb.AppendLine("actions: " + string.Join("   ", items));
+            if (S.Info.Kits[actor].Any(m => S.Data.Moves[m].Element == Element.Root)) sb.AppendLine(RootSources(actor));
             sb.Append("walk with: m X Y   ·   ? for help");
         }
         return sb.ToString();
+    }
+
+    /// <summary>The Root features this unit can draw on, so the current stance's sources stand out.</summary>
+    private string RootSources(int actor)
+    {
+        var at = S.Units[actor].Pos;
+        var sources = new List<string>();
+        for (int tile = 0; tile < S.TileCount; tile++)
+        {
+            if (!Rules.Feeds(S, tile, Element.Root) || S.PosOf(tile).Manhattan(at) > S.Data.Rules.SourceRange) continue;
+            var f = S.FeatureAt(tile)!;
+            sources.Add($"{f.Name.ToLowerInvariant()} {S.PosOf(tile)} {S.FeatureUses[tile]} uses, {S.FeatureHp[tile]} HP");
+        }
+        return sources.Count > 0
+            ? "Root sources in reach: " + string.Join("; ", sources)
+            : "No Root source in reach: Bind will only slow and Tether lasts a round";
     }
 
     private static string Sim(Outcome outcome) => outcome switch

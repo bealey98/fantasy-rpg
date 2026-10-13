@@ -58,6 +58,6 @@ and review the diff.
 3. Battle state, movement and pathfinding with heights, ladders and movement costs. **Done.**
 4. The turn loop, both logs, the replay viewer and terminal play. Fuzzing starts. **Done.**
 5. Weapon moves, weight classes, collisions, falling and no ground. **Done.**
-6. Features and sources, then the Elderwood's Tiers 1 and 2.
+6. Features and sources, then the Elderwood's Tiers 1 and 2. **Done.**
 7. The Loper, including mounting.
 8. The four goblin types, the batch runner and the first real benchmark.

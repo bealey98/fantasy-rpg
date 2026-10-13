@@ -44,7 +44,7 @@ public static partial class Rules
         return s.Standable(tile)
             && s.Trap[tile] == TrapKind.None
             && Math.Abs(s.Heights[tile] - s.Heights[s.Idx(from)]) <= 1
-            && TetherAllows(s, actor, to);
+            && TetherAllows(s, actor, from, to);
     }
 
     private static void ExecuteCharge(BattleState s, in BattleAction a, MoveDef move)

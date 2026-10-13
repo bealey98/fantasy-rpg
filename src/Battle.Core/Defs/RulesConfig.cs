@@ -43,6 +43,12 @@ public sealed class RulesConfig
     /// <summary>Whether the arena's edge acts as a wall for pushes (true) or as a drop into no ground (false).</summary>
     public bool EdgesAreWalls { get; set; } = true;
 
+    /// <summary>How far (orthogonal steps) a caster can draw on a natural feature.</summary>
+    public int SourceRange { get; set; } = 3;
+
+    /// <summary>The furthest apart Tether's two ends can be when it's cast.</summary>
+    public int TetherMaxLength { get; set; } = 4;
+
     /// <summary>The bonus or reduction for a timing grade from one of the tables above.</summary>
     public static int ByGrade(int[] table, Timing grade) => grade switch
     {

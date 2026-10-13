@@ -12,7 +12,11 @@ public enum Outcome : byte { Ongoing, PartyWon, PartyLost, Draw }
 /// </summary>
 public enum Timing : byte { None, Fumble, Good, Perfect }
 
-public enum TrapKind : byte { None, Bind, Snap }
+/// <summary>
+/// Traps on tiles. Bind traps are the hero's: a weak one (cast with no source) only slows, and the
+/// Tier 2 one also deals damage and slows once the root ends. Snap traps are the Plinker's.
+/// </summary>
+public enum TrapKind : byte { None, Bind, BindWeak, BindUpgraded, Snap }
 
 public enum EventType : byte
 {

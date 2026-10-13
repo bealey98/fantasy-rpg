@@ -24,6 +24,9 @@ public struct Tether
 
     public TetherVariant Variant;
 
+    /// <summary>For a sapping tether: HP taken from each enemy end at the end of every round.</summary>
+    public int Amount;
+
     public readonly bool Involves(int unit) => Active && (UnitA == unit || UnitB == unit);
 
     /// <summary>The other end's unit index (or -1 for an object tile) for one end's unit.</summary>

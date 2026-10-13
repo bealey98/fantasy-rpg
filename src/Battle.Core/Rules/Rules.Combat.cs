@@ -160,6 +160,7 @@ public static partial class Rules
         if (!t.Alive) return;
         amount = Math.Max(0, amount);
         t.Hp = Math.Max(0, t.Hp - amount);
+        if (source >= 0 && amount > 0 && t.OnBoard) s.Disturbed[s.Idx(t.Pos)] = true;
         s.Emit(EventType.Damage, source, target, t.Pos, t.Pos, amount, t.Hp, timing, move, detail);
         if (t.Hp == 0) Defeat(s, target, source);
     }

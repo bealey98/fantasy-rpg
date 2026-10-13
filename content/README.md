@@ -48,6 +48,21 @@ Natural features: what magic draws on. One feature per tile at most.
 | defence | Subtracted from damage taken |
 | power | Enemies act in order of power, strongest first |
 | tags | Joined with `+`: hero, companion, humanoid, beast, goblin |
+| moves | Move ids from moves.json, joined with `+` (the hero's come from the encounter instead) |
+
+## moves.json
+
+Every move, as a list. Each move's `kind` picks the rule that handles it (melee, ranged, charge,
+push, parry, bind, tether, burrow, swap, scamper, trap, point, whip, taunt, brace); the rest are
+numbers for that rule. The file's opening comment lists every key. Unknown keys are errors.
+
+The hero's moves come from the encounter's loadout (two main weapon moves, one bonus weapon move,
+and the Elderwood's moves for his tier). Everyone else's come from the `moves` column of units.csv.
+
+## encounters/*.json
+
+One fight: the arena, who each enemy letter is, which goblin handles which beast, the hero's
+loadout and whether the enemies won the first strike. See any of the files for the layout.
 
 ## rules.json
 

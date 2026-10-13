@@ -34,6 +34,8 @@ public sealed class BattleState
     public int[] TrapTimer;
     /// <summary>The burrowed unit surfacing on each tile next turn, or -1. The game shows these as rumbling ground.</summary>
     public int[] Rumble;
+    /// <summary>Tiles where an attack landed since the last creatures step. Birds nearby take fright.</summary>
+    public bool[] Disturbed;
 
     // ---- The units ----
     public Unit[] Units;
@@ -86,6 +88,7 @@ public sealed class BattleState
         TrapOwner = new int[n];
         TrapTimer = new int[n];
         Rumble = new int[n];
+        Disturbed = new bool[n];
         Array.Fill(Feature, -1);
         Array.Fill(Occupant, -1);
         Array.Fill(TrapOwner, -1);
@@ -112,6 +115,7 @@ public sealed class BattleState
         TrapOwner = (int[])other.TrapOwner.Clone();
         TrapTimer = (int[])other.TrapTimer.Clone();
         Rumble = (int[])other.Rumble.Clone();
+        Disturbed = (bool[])other.Disturbed.Clone();
         Units = (Unit[])other.Units.Clone();
         Tethers = (Tether[])other.Tethers.Clone();
         TetherCount = other.TetherCount;
@@ -242,6 +246,7 @@ public sealed class BattleState
         h.Add(Occupant);
         foreach (var t in Trap) h.Add((int)t);
         h.Add(TrapOwner); h.Add(TrapTimer); h.Add(Rumble);
+        foreach (bool d in Disturbed) h.Add(d ? 1 : 0);
         foreach (ref var u in Units.AsSpan())
         {
             h.Add(u.Def); h.Add((int)u.Side); h.Add((int)u.Weight); h.Add(u.Pos.X); h.Add(u.Pos.Y);
@@ -257,7 +262,7 @@ public sealed class BattleState
             var t = Tethers[i];
             h.Add(t.Active ? 1 : 0); h.Add(t.Caster); h.Add(t.UnitA); h.Add(t.UnitB);
             h.Add(t.TileA.X); h.Add(t.TileA.Y); h.Add(t.TileB.X); h.Add(t.TileB.Y);
-            h.Add(t.Length); h.Add(t.Timer); h.Add((int)t.Variant);
+            h.Add(t.Length); h.Add(t.Timer); h.Add((int)t.Variant); h.Add(t.Amount);
         }
         h.Add(Round); h.Add((int)Phase); h.Add(OrderCount); h.Add(OrderPos);
         for (int i = 0; i < OrderCount; i++) h.Add(Order[i]);

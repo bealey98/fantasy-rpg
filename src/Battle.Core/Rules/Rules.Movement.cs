@@ -60,7 +60,7 @@ public static partial class Rules
             cost += s.Data.Rules.LadderCostPerLevel * Math.Abs(dh);
         }
 
-        if (!TetherAllows(s, unit, s.PosOf(to))) return -1;
+        if (!TetherAllows(s, unit, s.PosOf(from), s.PosOf(to))) return -1;
         return cost;
     }
 
@@ -203,12 +203,6 @@ public static partial class Rules
     {
         ArriveEffects(s, body, from);
     }
-
-    /// <summary>
-    /// Tether rule hook: may this unit step onto the tile without breaking a tether?
-    /// Always true until the Elderwood's Tether arrives in step 6.
-    /// </summary>
-    public static bool TetherAllows(BattleState s, int unit, Pos tile) => true;
 
     // ------------------------------------------------------------------
     // A tiny binary heap of ints (smallest first)

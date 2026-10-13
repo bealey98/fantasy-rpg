@@ -30,5 +30,33 @@
     "id": "shiv", "name": "Shiv", "slot": "main", "kind": "melee",
     "damage": 2,
     "text": "A rusty stab at a neighbouring enemy."
+  },
+
+  // ---- The Path of the Elderwood (Root). Tier 1 at the start of the game; Tier 2 in its chapter. ----
+  {
+    "id": "bind", "name": "Bind", "slot": "bonus", "kind": "bind", "tier": 1,
+    "element": "root", "source": "light", "range": 4, "needs_sight": true, "height_bonus": true, "rounds": 1,
+    "text": "Root an enemy in sight for a round, set a root trap on a tile, or bind your weapon so your next hit roots. Draws on growth within reach; with none, it only slows."
+  },
+  {
+    "id": "bind_2", "name": "Bind", "slot": "bonus", "kind": "bind", "tier": 2, "upgraded": true,
+    "element": "root", "source": "light", "range": 4, "needs_sight": true, "height_bonus": true, "rounds": 1,
+    "damage": 1,
+    "text": "Tier 2 Bind: as Bind, but the roots also deal 1 damage, and the target is slowed once the root ends."
+  },
+  {
+    "id": "tether", "name": "Tether", "slot": "main", "kind": "tether", "tier": 1, "variant": "plain",
+    "element": "root", "source": "light", "range": 4, "rounds": 2,
+    "text": "Bind two targets together for 2 rounds: two enemies, an enemy and a tree or rock, or an enemy and an ally. Neither can move further apart unless the heavier drags the lighter."
+  },
+  {
+    "id": "tether_pull", "name": "Tether (light: pull)", "slot": "main", "kind": "tether", "tier": 2, "variant": "pull",
+    "element": "root", "source": "light", "range": 4, "rounds": 2, "amount": 3,
+    "text": "Tier 2 light Tether: as Tether, and it pulls the ends together up to 3 tiles, lighter towards heavier."
+  },
+  {
+    "id": "tether_sap", "name": "Tether (dark: sap)", "slot": "main", "kind": "tether", "tier": 2, "variant": "sap",
+    "element": "root", "source": "dark", "dark_cost": 3, "range": 4, "rounds": 2, "amount": 1,
+    "text": "Tier 2 dark Tether: as Tether, and each round it saps 1 HP from every enemy end and gives it to you. Drains 3 HP from a nearby tree or thicket, or from you if none is left."
   }
 ]

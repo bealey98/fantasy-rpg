@@ -14,6 +14,8 @@ public static partial class Rules
             case MoveKind.Charge: ChargeTargets(s, actor, move, output); break;
             case MoveKind.Push: PushTargets(s, actor, output); break;
             case MoveKind.Parry: ParryTargets(s, actor, output); break;
+            case MoveKind.Bind: BindTargets(s, actor, move, output); break;
+            case MoveKind.Tether: TetherTargets(s, actor, move, output); break;
             default: break; // not in the game yet
         }
     }
@@ -25,6 +27,8 @@ public static partial class Rules
             case MoveKind.Charge: ExecuteCharge(s, a, move); break;
             case MoveKind.Push: ExecutePush(s, a, move); break;
             case MoveKind.Parry: ExecuteParry(s, a, move); break;
+            case MoveKind.Bind: ExecuteBind(s, a, move); break;
+            case MoveKind.Tether: ExecuteTether(s, a, move); break;
             default: throw new IllegalActionException($"{move.Name} ({move.Kind}) isn't implemented yet");
         }
     }
@@ -47,8 +51,12 @@ public static partial class Rules
         }
     }
 
-    /// <summary>Moves that need more than a free action slot, such as a special needing both actions.</summary>
-    private static bool ExtraAvailability(BattleState s, int actor, MoveDef move) => true;
+    /// <summary>Moves that need more than a free action slot. Dark moves need something to pay with.</summary>
+    private static bool ExtraAvailability(BattleState s, int actor, MoveDef move)
+    {
+        if (move.Source == SourceKind.Dark && !CanPayDark(s, actor, move)) return false;
+        return true;
+    }
 
     /// <summary>Can an area move aimed at a tile hurt the party? (Burrow, later.)</summary>
     private static bool AreaCanHurtParty(BattleState s, in BattleAction a, MoveDef move) => false;
