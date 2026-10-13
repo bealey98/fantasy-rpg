@@ -1,0 +1,6 @@
+glyph,id,name,move_cost,walkable,no_ground,ladder,water,cover,object
+.,ground,Ground,2,yes,no,no,no,none,no
+~,water,Water,3,yes,no,no,yes,none,no
+#,rock,Rock,2,no,no,no,no,high,yes
+|,ladder,Ladder,2,yes,no,yes,no,none,no
+x,no_ground,No ground,2,no,yes,no,no,none,no

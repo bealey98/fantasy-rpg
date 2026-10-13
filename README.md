@@ -26,12 +26,13 @@ M1's question is: **are the fights interesting decisions?**
 ```
 scripts/check.sh                                   # build, run every test, short benchmark (check.ps1 on Windows)
 dotnet run --project tests/Battle.Tests -c Release # just the tests
+dotnet run --project src/Battle.Sim -- render river-crossing   # draw an arena
 ```
 
 ## Build steps
 
 1. The repository, the C# solution and one check script. **Done.**
-2. Arena files: the parser, its checks and a static ASCII render.
+2. Arena files: the parser, its checks and a static ASCII render. **Done.**
 3. Battle state, movement and pathfinding with heights, ladders and movement costs.
 4. The turn loop, both logs, the replay viewer and terminal play. Fuzzing starts.
 5. Weapon moves, weight classes, collisions, falling and no ground.

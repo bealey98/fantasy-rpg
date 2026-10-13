@@ -1,0 +1,61 @@
+# Content
+
+Everything here can be changed without touching code. The loader checks every file and reports
+mistakes with the file name and line. Movement is counted in **half-points**: 2 is one tile, 3 is
+one and a half.
+
+## terrain.csv
+
+One row per kind of ground. Every tile has exactly one.
+
+| Column | Meaning |
+| --- | --- |
+| glyph | The character used in arena files |
+| id, name | Code name and display name |
+| move_cost | Half-points to step onto it (ground 2, water 3) |
+| walkable | Whether units can walk onto it (rock and no ground can't be walked onto) |
+| no_ground | Anything that enters it dies at once. Must go with height 0 in arenas |
+| ladder | Lets units climb two or more levels to or from a neighbouring tile |
+| water | Water tiles |
+| cover | none, low or high: how much it blocks sight. Higher ground sees over low cover |
+| object | Objects never move. Units pushed into one take collision damage, and Tether can anchor to one |
+
+## features.csv
+
+Natural features: what magic draws on. One feature per tile at most.
+
+| Column | Meaning |
+| --- | --- |
+| glyph, id, name | As above |
+| feeds | Elements it feeds, joined with `+`: root, echo, kinship, wind, light, darkness |
+| blocks | Blocks movement, like a tree |
+| cover, object | As for terrain |
+| extra_move_cost | Extra half-points to step onto its tile, like dense growth |
+| uses | Uses for light spells, regained each round up to this number |
+| regen | Uses regained at the end of each round |
+| hp | HP that dark spells drain; a drained feature dies. 0 means dark spells can't use it |
+| creature | none, or how it moves on its own: drift (fireflies), flee_attack (birds), flee_near (deer) |
+
+## arenas/*.txt
+
+A few `key: value` lines, then one layer per section. Text after a section name is ignored, so
+it can hold a legend.
+
+```
+arena: river-crossing
+size: 10 x 6
+time: day
+
+[height]    0 no ground, 1 low, 2 base, 3 high, 4 very high
+2222233344
+...
+[terrain]   characters from terrain.csv
+[features]  characters from features.csv, '.' for none
+[units]     H hero, L Loper, lowercase letters for enemies, '.' for none
+```
+
+`[height]` and `[terrain]` are required. Height 0 and no-ground terrain must go together. Units
+can't start on rock, no ground or inside a tree, and every ladder must sit next to a drop of two
+or more levels.
+
+Check an arena with `dotnet run --project src/Battle.Sim -- render <name>`.
