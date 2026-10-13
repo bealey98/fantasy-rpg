@@ -18,7 +18,24 @@ public static class RulesLoader
         ["melee_max_height_diff"] = (r, v, k) => r.MeleeMaxHeightDiff = Int(v, k),
         ["round_cap"] = (r, v, k) => r.RoundCap = Int(v, k),
         ["timing_skill"] = (r, v, k) => r.TimingSkill = TimingSkill(v, k),
+        ["knocked_over_drain"] = (r, v, k) => r.KnockedOverDrain = Tiles(v, k),
+        ["slow_amount"] = (r, v, k) => r.SlowAmount = Tiles(v, k),
+        ["attack_bonus"] = (r, v, k) => r.AttackBonus = GradeTable(v, k),
+        ["guard_reduction"] = (r, v, k) => r.GuardReduction = GradeTable(v, k),
+        ["collision_damage"] = (r, v, k) => r.CollisionDamage = Int(v, k),
+        ["unit_collision_damage"] = (r, v, k) => r.UnitCollisionDamage = Int(v, k),
+        ["fall_damage_per_level"] = (r, v, k) => r.FallDamagePerLevel = Int(v, k),
+        ["edges_are_walls"] = (r, v, k) => r.EdgesAreWalls = Bool(v, k),
     };
+
+    /// <summary>{"fumble": 0, "good": 1, "perfect": 2} as [0, 1, 2].</summary>
+    private static int[] GradeTable(JsonElement v, string key)
+    {
+        if (v.ValueKind != JsonValueKind.Object) throw new ContentException($"rules.json: '{key}' should be {{\"fumble\": n, \"good\": n, \"perfect\": n}}");
+        int Grade(string name) => v.TryGetProperty(name, out var g) ? Int(g, $"{key}.{name}")
+            : throw new ContentException($"rules.json: '{key}' is missing '{name}'");
+        return [Grade("fumble"), Grade("good"), Grade("perfect")];
+    }
 
     private static Dictionary<string, int[]> TimingSkill(JsonElement v, string key)
     {

@@ -150,8 +150,7 @@ public static partial class Rules
     {
         ref var u = ref s.Units[unit];
         if (!u.Alive || !u.OnBoard || u.MoveLeft <= 0) return false;
-        ref var body = ref s.Units[s.Body(unit)];
-        return body.Rooted == 0 && body.Braced == 0;
+        return !Anchored(s, unit);
     }
 
     /// <summary>
@@ -192,14 +191,17 @@ public static partial class Rules
         u.MoveLeft -= cost;
         u.Set(UnitFlags.Moved);
         s.Emit(EventType.Move, unit, unit, from, destination, cost, detail: detail);
-        AfterMove(s, unit, from);
+        Arrive(s, s.Body(unit), from);
         return true;
     }
 
-    /// <summary>What happens once a unit stops on a tile after walking there.</summary>
-    private static void AfterMove(BattleState s, int unit, Pos from)
+    /// <summary>
+    /// What happens once a unit lands on a tile, whether it walked, charged or was pushed:
+    /// traps spring and tethers drag (added in later steps).
+    /// </summary>
+    private static void Arrive(BattleState s, int body, Pos from)
     {
-        // Traps and tether drags join in later steps.
+        ArriveEffects(s, body, from);
     }
 
     /// <summary>

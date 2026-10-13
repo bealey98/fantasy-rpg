@@ -11,8 +11,10 @@ public static partial class Rules
     {
         switch (move.Kind)
         {
-            default:
-                break; // not in the game yet
+            case MoveKind.Charge: ChargeTargets(s, actor, move, output); break;
+            case MoveKind.Push: PushTargets(s, actor, output); break;
+            case MoveKind.Parry: ParryTargets(s, actor, output); break;
+            default: break; // not in the game yet
         }
     }
 
@@ -20,8 +22,28 @@ public static partial class Rules
     {
         switch (move.Kind)
         {
-            default:
-                throw new IllegalActionException($"{move.Name} ({move.Kind}) isn't implemented yet");
+            case MoveKind.Charge: ExecuteCharge(s, a, move); break;
+            case MoveKind.Push: ExecutePush(s, a, move); break;
+            case MoveKind.Parry: ExecuteParry(s, a, move); break;
+            default: throw new IllegalActionException($"{move.Name} ({move.Kind}) isn't implemented yet");
+        }
+    }
+
+    /// <summary>Danger zones for each kind of move.</summary>
+    private static void MarkKindThreat(BattleState s, int unit, MoveDef move, Pos from, bool[] mark)
+    {
+        switch (move.Kind)
+        {
+            case MoveKind.Charge:
+                MarkChargeThreat(s, move, from, mark);
+                break;
+            case MoveKind.Push:
+                foreach (var d in Dirs.All)
+                {
+                    var p = from.Step(d);
+                    if (s.InBounds(p) && MeleeReach(s, from, p)) mark[s.Idx(p)] = true;
+                }
+                break;
         }
     }
 

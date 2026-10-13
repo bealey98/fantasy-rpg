@@ -13,6 +13,27 @@
   // A battle still going after this many rounds is a draw.
   "round_cap": 30,
 
+  // Status effects. Knocked over: movement lost getting up, once. Slowed: movement lost each turn.
+  "knocked_over_drain": 3,
+  "slow_amount": 2,
+
+  // What timing earns (an open design question; these are placeholders).
+  // attack_bonus: extra damage from the attacker's action command.
+  // guard_reduction: damage the defender's guard takes off an enemy attack.
+  "attack_bonus": { "fumble": 0, "good": 1, "perfect": 2 },
+  "guard_reduction": { "fumble": 0, "good": 1, "perfect": 2 },
+
+  // Force effects. Pushes into objects (rock, trees, a bank, the arena edge) hurt.
+  // The design says only objects hurt, so pushing one unit into another does no damage.
+  "collision_damage": 2,
+  "unit_collision_damage": 0,
+
+  // Falling more than one level deals this much per level beyond the first.
+  "fall_damage_per_level": 2,
+
+  // The arena edge stops pushes like a wall (true) or drops into no ground (false).
+  "edges_are_walls": true,
+
   // Simulated timing for each skill level: chance in 100 of [fumble, good, perfect].
   // Used by the simulator, and by terminal play until the real timing minigames exist.
   "timing_skill": {

@@ -25,10 +25,10 @@ public sealed class EncounterDef
 public sealed class PartySetup
 {
     /// <summary>Main weapon moves (two slots).</summary>
-    public IReadOnlyList<string> WeaponMain { get; init; } = ["strike"];
+    public IReadOnlyList<string> WeaponMain { get; init; } = ["strike", "bull_rush"];
 
     /// <summary>The bonus weapon move (one slot): "shove" or "parry". Empty for none.</summary>
-    public string WeaponBonus { get; init; } = "";
+    public string WeaponBonus { get; init; } = "shove";
 
     /// <summary>The Elderwood's tier: 1 at the start of the game, 2 after its chapter, 0 for none (tests only).</summary>
     public int ElderwoodTier { get; init; }

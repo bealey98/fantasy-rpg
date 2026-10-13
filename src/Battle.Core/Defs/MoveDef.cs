@@ -68,8 +68,11 @@ public sealed class MoveDef
     /// <summary>Has an action command: the user's timing changes how well it lands.</summary>
     public bool Command { get; init; }
 
-    /// <summary>Base push in tiles; the weight difference between pusher and target is added.</summary>
-    public int Push { get; init; }
+    /// <summary>
+    /// Base push in tiles; the weight difference between pusher and target is added, so lighter
+    /// targets go further. -1 means the move doesn't push at all.
+    /// </summary>
+    public int Push { get; init; } = -1;
 
     /// <summary>Tiles of straight-line charge before the hit.</summary>
     public int Charge { get; init; }

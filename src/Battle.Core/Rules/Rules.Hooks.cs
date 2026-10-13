@@ -30,6 +30,12 @@ public static partial class Rules
     /// <summary>Movement for a unit's turn, before statuses. A rider uses its mount's movement (later).</summary>
     private static int MountedMovement(BattleState s, int unit) => s.Units[unit].MoveMax;
 
+    /// <summary>Traps and tether drags when a unit lands on a tile (later).</summary>
+    private static void ArriveEffects(BattleState s, int body, Pos from) { }
+
+    /// <summary>Extra effects when the hero's weapon lands a hit: a weapon Bind roots the target (later).</summary>
+    private static void OnWeaponHit(BattleState s, int attacker, int target) { }
+
     /// <summary>Mounting and dismounting (later).</summary>
     private static void AddMountActions(BattleState s, int actor, List<BattleAction> output) { }
 

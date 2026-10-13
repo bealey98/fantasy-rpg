@@ -23,9 +23,6 @@ public static partial class Rules
         }
     }
 
-    /// <summary>Danger zones for the move kinds that join in later steps.</summary>
-    private static void MarkKindThreat(BattleState s, int unit, MoveDef move, Pos from, bool[] mark) { }
-
     /// <summary>Movement a unit could add this turn on top of its normal allowance (Scamper, later).</summary>
     public static int ExtraMovementAvailable(BattleState s, int unit) => 0;
 }

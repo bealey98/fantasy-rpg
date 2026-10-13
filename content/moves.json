@@ -12,6 +12,21 @@
     "text": "A weapon hit on a neighbouring enemy."
   },
   {
+    "id": "bull_rush", "name": "Bull Rush", "slot": "main", "kind": "charge",
+    "damage": 1, "charge": 3, "push": 0, "command": true,
+    "text": "Charge up to 3 tiles in a straight line, then strike a little weaker than Strike. Lighter enemies are knocked back a tile per weight class."
+  },
+  {
+    "id": "shove", "name": "Shove", "slot": "bonus", "kind": "push",
+    "damage": 1, "push": 1,
+    "text": "Push a neighbouring enemy 1 tile, plus 1 for each weight class it's lighter. Objects it hits hurt it."
+  },
+  {
+    "id": "parry", "name": "Parry", "slot": "bonus", "kind": "parry",
+    "amount": 2,
+    "text": "Ready a block: the next melee attack on you before your next turn is blocked, and good timing strikes back for 2."
+  },
+  {
     "id": "shiv", "name": "Shiv", "slot": "main", "kind": "melee",
     "damage": 2,
     "text": "A rusty stab at a neighbouring enemy."

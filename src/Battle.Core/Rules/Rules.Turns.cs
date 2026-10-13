@@ -143,9 +143,7 @@ public static partial class Rules
     public static int TurnMovement(BattleState s, int unit)
     {
         ref var u = ref s.Units[unit];
-        int body = s.Body(unit);
-        ref var b = ref s.Units[body];
-        if (b.Rooted > 0 || b.Braced > 0) return 0;
+        if (Anchored(s, unit)) return 0;
         int move = MountedMovement(s, unit);
         if (u.Slowed > 0) move -= s.Data.Rules.SlowAmount;
         return Math.Max(0, move);

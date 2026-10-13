@@ -54,7 +54,7 @@ public static class MovesLoader
                 HeightBonus = Flag("height_bonus"),
                 NeedsSight = Flag("needs_sight"),
                 Command = Flag("command"),
-                Push = Num("push"),
+                Push = Num("push", -1),
                 Charge = Num("charge"),
                 Status = ParseEnum<StatusId>(Str("status", "none"), where, "status"),
                 StatusRounds = Num("status_rounds", 1),

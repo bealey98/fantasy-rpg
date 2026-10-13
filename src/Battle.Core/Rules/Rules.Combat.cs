@@ -56,12 +56,100 @@ public static partial class Rules
     // ------------------------------------------------------------------
 
     /// <summary>
-    /// One attack from one unit on another, using a move's damage. Timing, guards, statuses and the
-    /// rest join in step 5; for now an attack simply deals the move's damage.
+    /// One attack from one unit on another. In order:
+    ///   1. A blinded attacker (with an action command) misses on a fumble.
+    ///   2. A melee attack on a unit with Parry readied is blocked; a good guard strikes back.
+    ///   3. Damage: the move's damage, plus Gang up, plus any whip buff, plus the attacker's timing
+    ///      bonus (none while blinded), minus the defender's guard, minus defence. Never below 0.
+    ///   4. The move's status lands, and a weapon Bind roots the target.
+    /// Returns true if the attack landed.
     /// </summary>
-    public static void Attack(BattleState s, int attacker, int target, MoveDef move, Timing timing, AttackKind kind)
+    public static bool Attack(BattleState s, int attacker, int target, MoveDef move, Timing timing, AttackKind kind)
     {
-        DealDamage(s, attacker, target, move.Damage, move.Index, timing);
+        ref var a = ref s.Units[attacker];
+        ref var t = ref s.Units[target];
+        if (!t.Alive) return false;
+
+        bool command = a.Side == Side.Party && move.Command;
+        bool blinded = a.Blinded > 0 && kind != AttackKind.Spell && command;
+        if (blinded && timing == Timing.Fumble)
+        {
+            s.Emit(EventType.Miss, attacker, target, a.Pos, t.Pos, timing: timing, move: move.Index, detail: "blinded");
+            ConsumeBuff(s, attacker);
+            return false;
+        }
+
+        if (kind == AttackKind.Melee && t.Has(UnitFlags.ParryReady) && AreEnemies(s, attacker, target))
+        {
+            ResolveParry(s, attacker, target, move, timing);
+            ConsumeBuff(s, attacker);
+            return false;
+        }
+
+        if (move.Damage > 0)
+        {
+            int damage = move.Damage + GangUpBonus(s, attacker, target, move) + a.BuffAmount;
+            if (command && !blinded) damage += RulesConfig.ByGrade(s.Data.Rules.AttackBonus, timing);
+            if (t.Side == Side.Party && a.Side == Side.Enemy) damage -= RulesConfig.ByGrade(s.Data.Rules.GuardReduction, timing);
+            damage -= t.Defence + t.BraceDefence;
+            DealDamage(s, attacker, target, Math.Max(0, damage), move.Index, timing);
+        }
+        ConsumeBuff(s, attacker);
+
+        if (s.Units[target].Alive)
+        {
+            ApplyStatus(s, attacker, target, move.Status, move.StatusRounds, move.Index);
+            if (kind == AttackKind.Melee && s.Units[attacker].Has(UnitFlags.WeaponBind)) OnWeaponHit(s, attacker, target);
+        }
+        return true;
+    }
+
+    /// <summary>Gang up: extra damage when another goblin is also next to the target.</summary>
+    private static int GangUpBonus(BattleState s, int attacker, int target, MoveDef move)
+    {
+        if (move.GangUp <= 0) return 0;
+        var where = s.Units[target].Pos;
+        for (int i = 0; i < s.Units.Length; i++)
+        {
+            if (i == attacker || !s.Units[i].Alive || !s.Units[i].OnBoard || !s.DefOf(i).Has(UnitTags.Goblin)) continue;
+            if (s.Units[i].Side == s.Units[attacker].Side && s.Units[i].Pos.Manhattan(where) == 1) return move.GangUp;
+        }
+        return 0;
+    }
+
+    /// <summary>A whip buff lasts until its unit's next attack.</summary>
+    private static void ConsumeBuff(BattleState s, int attacker)
+    {
+        ref var a = ref s.Units[attacker];
+        if (a.BuffAmount == 0) return;
+        a.BuffAmount = 0;
+        a.Buffed = 0;
+        s.Emit(EventType.StatusEnd, attacker, attacker, detail: "buffed");
+    }
+
+    /// <summary>
+    /// Parry: the block is automatic and stops the whole attack. Striking back needs the defender's
+    /// timing: a good or perfect guard counters for the Parry move's amount.
+    /// </summary>
+    private static void ResolveParry(BattleState s, int attacker, int defender, MoveDef move, Timing guard)
+    {
+        ref var d = ref s.Units[defender];
+        d.Set(UnitFlags.ParryReady, false);
+        s.Emit(EventType.Parry, attacker, defender, s.Units[attacker].Pos, d.Pos, timing: guard, move: move.Index);
+        if (guard is not (Timing.Good or Timing.Perfect)) return;
+        var parry = KitMove(s, defender, MoveKind.Parry);
+        int counter = parry?.Amount ?? 1;
+        s.Emit(EventType.Counter, defender, attacker, d.Pos, s.Units[attacker].Pos, timing: guard, move: parry?.Index ?? -1);
+        DealDamage(s, defender, attacker, counter, parry?.Index ?? -1, guard, "counter");
+        if (s.Units[attacker].Alive && s.Units[defender].Has(UnitFlags.WeaponBind)) OnWeaponHit(s, defender, attacker);
+    }
+
+    /// <summary>The first move of a kind in a unit's kit, or null.</summary>
+    public static MoveDef? KitMove(BattleState s, int unit, MoveKind kind)
+    {
+        foreach (int m in s.Info.Kits[unit])
+            if (s.Data.Moves[m].Kind == kind) return s.Data.Moves[m];
+        return null;
     }
 
     /// <summary>Takes HP from a unit, logs it, and defeats the unit at 0 HP.</summary>

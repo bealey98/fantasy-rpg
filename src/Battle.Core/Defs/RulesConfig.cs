@@ -25,6 +25,33 @@ public sealed class RulesConfig
     /// <summary>Half-points of movement a slowed unit loses each turn.</summary>
     public int SlowAmount { get; set; } = 4;
 
+    /// <summary>Extra damage from the attacker's action command, by grade: fumble, good, perfect.</summary>
+    public int[] AttackBonus { get; set; } = [0, 1, 2];
+
+    /// <summary>Damage the defender's guard takes off an enemy attack, by grade: fumble, good, perfect.</summary>
+    public int[] GuardReduction { get; set; } = [0, 1, 2];
+
+    /// <summary>Damage to a unit driven into an object (rock, a tree, a bank, the arena's edge).</summary>
+    public int CollisionDamage { get; set; } = 2;
+
+    /// <summary>Damage to each of two units when one is driven into the other. The design says only objects hurt, so 0.</summary>
+    public int UnitCollisionDamage { get; set; }
+
+    /// <summary>Damage per level fallen beyond the first. A one-level drop is free.</summary>
+    public int FallDamagePerLevel { get; set; } = 2;
+
+    /// <summary>Whether the arena's edge acts as a wall for pushes (true) or as a drop into no ground (false).</summary>
+    public bool EdgesAreWalls { get; set; } = true;
+
+    /// <summary>The bonus or reduction for a timing grade from one of the tables above.</summary>
+    public static int ByGrade(int[] table, Timing grade) => grade switch
+    {
+        Timing.Fumble => table[0],
+        Timing.Good => table[1],
+        Timing.Perfect => table[2],
+        _ => 0,
+    };
+
     /// <summary>
     /// Simulated players' timing: for each skill level, the chance in 100 of a fumble, a good and a
     /// perfect grade. Used by the simulator and by terminal play until real timing minigames exist.
