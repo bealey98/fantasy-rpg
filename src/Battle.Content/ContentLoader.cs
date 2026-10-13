@@ -37,7 +37,79 @@ public static class ContentLoader
     {
         var terrain = LoadTerrain(Path.Combine(contentDir, "terrain.csv"));
         var features = LoadFeatures(Path.Combine(contentDir, "features.csv"));
-        return new GameData(terrain, features, HashContent(contentDir));
+        var units = LoadUnits(Path.Combine(contentDir, "units.csv"));
+        var rules = RulesLoader.Load(Path.Combine(contentDir, "rules.json"));
+        return new GameData(terrain, features, units, rules, HashContent(contentDir));
+    }
+
+    /// <summary>
+    /// Reads a distance in tiles, where halves are allowed ("1.5"), and returns it in half-points.
+    /// </summary>
+    internal static int Tiles(CsvRow row, string column)
+    {
+        string raw = row.Get(column);
+        if (!decimal.TryParse(raw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out decimal tiles))
+            throw new ContentException($"{row.Where}: '{column}' should be a number of tiles, got '{raw}'");
+        decimal halves = tiles * 2;
+        if (halves != decimal.Truncate(halves))
+            throw new ContentException($"{row.Where}: '{column}' should be a whole or half number of tiles, got '{raw}'");
+        return (int)halves;
+    }
+
+    private static List<UnitDef> LoadUnits(string path)
+    {
+        var list = new List<UnitDef>();
+        foreach (var row in Csv.Read(path))
+        {
+            list.Add(new UnitDef
+            {
+                Index = list.Count,
+                Id = row.Get("id"),
+                Name = row.Get("name"),
+                Side = row.Get("side") switch
+                {
+                    "party" => Side.Party,
+                    "enemy" => Side.Enemy,
+                    var other => throw new ContentException($"{row.Where}: side should be party or enemy, got '{other}'"),
+                },
+                Hp = row.Int("hp"),
+                Move = Tiles(row, "move"),
+                Weight = row.Get("weight") switch
+                {
+                    "light" => Weight.Light,
+                    "medium" => Weight.Medium,
+                    "heavy" => Weight.Heavy,
+                    var other => throw new ContentException($"{row.Where}: weight should be light, medium or heavy, got '{other}'"),
+                },
+                Defence = row.Int("defence"),
+                Power = row.Int("power"),
+                Tags = ParseTags(row),
+                Moves = row.GetOr("moves", "").Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            });
+            if (list[^1].Hp < 1) throw new ContentException($"{row.Where}: hp must be at least 1");
+        }
+        CheckUnique(list.Select(u => (u.Id, u.Id)), "units.csv");
+        foreach (string required in new[] { "hero", "loper" })
+            if (!list.Any(u => u.Id == required)) throw new ContentException($"units.csv: there must be a unit called '{required}'");
+        return list;
+    }
+
+    private static UnitTags ParseTags(CsvRow row)
+    {
+        var tags = UnitTags.None;
+        foreach (string part in row.Get("tags").Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            tags |= part switch
+            {
+                "hero" => UnitTags.Hero,
+                "companion" => UnitTags.Companion,
+                "humanoid" => UnitTags.Humanoid,
+                "beast" => UnitTags.Beast,
+                "goblin" => UnitTags.Goblin,
+                _ => throw new ContentException($"{row.Where}: unknown tag '{part}'"),
+            };
+        }
+        return tags;
     }
 
     public static ArenaDef LoadArena(string contentDir, string nameOrPath, GameData data)
@@ -58,7 +130,7 @@ public static class ContentLoader
                 Glyph = row.Char("glyph"),
                 Id = row.Get("id"),
                 Name = row.Get("name"),
-                MoveCost = row.Int("move_cost"),
+                MoveCost = Tiles(row, "move_cost"),
                 Walkable = row.Bool("walkable"),
                 NoGround = row.Bool("no_ground"),
                 Ladder = row.Bool("ladder"),
@@ -66,7 +138,7 @@ public static class ContentLoader
                 Cover = ParseCover(row, "cover"),
                 IsObject = row.Bool("object"),
             });
-            if (list[^1].MoveCost < 1) throw new ContentException($"{row.Where}: move_cost must be at least 1");
+            if (list[^1].MoveCost < 1) throw new ContentException($"{row.Where}: move_cost must be at least half a tile");
         }
         CheckUnique(list.Select(t => (t.Glyph.ToString(), t.Id)), "terrain.csv");
         if (!list.Any(t => t.NoGround)) throw new ContentException("terrain.csv: one terrain must be no ground");
@@ -88,7 +160,7 @@ public static class ContentLoader
                 Blocks = row.Bool("blocks"),
                 Cover = ParseCover(row, "cover"),
                 IsObject = row.Bool("object"),
-                ExtraMoveCost = row.Int("extra_move_cost"),
+                ExtraMoveCost = Tiles(row, "extra_move_cost"),
                 Uses = row.Int("uses"),
                 Regen = row.Int("regen"),
                 Hp = row.Int("hp"),

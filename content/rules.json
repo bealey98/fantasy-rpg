@@ -1,0 +1,9 @@
+// Rule numbers that aren't tied to one unit or move. Everything here is a placeholder to tune.
+// Movement is in tiles; halves are allowed (1.5).
+{
+  // Extra movement to climb one level up a slope. Stepping down one level is free.
+  "climb_cost": 1,
+
+  // Movement per level when using a ladder to climb or descend two or more levels.
+  "ladder_cost_per_level": 1
+}

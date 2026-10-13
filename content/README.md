@@ -1,8 +1,8 @@
 # Content
 
 Everything here can be changed without touching code. The loader checks every file and reports
-mistakes with the file name and line. Movement is counted in **half-points**: 2 is one tile, 3 is
-one and a half.
+mistakes with the file name and line. Distances and movement are in **tiles**, and halves are
+allowed (`1.5`). Inside the core they're counted in half-points so all the maths stays whole numbers.
 
 ## terrain.csv
 
@@ -12,7 +12,7 @@ One row per kind of ground. Every tile has exactly one.
 | --- | --- |
 | glyph | The character used in arena files |
 | id, name | Code name and display name |
-| move_cost | Half-points to step onto it (ground 2, water 3) |
+| move_cost | Tiles of movement to step onto it (ground 1, water 1.5) |
 | walkable | Whether units can walk onto it (rock and no ground can't be walked onto) |
 | no_ground | Anything that enters it dies at once. Must go with height 0 in arenas |
 | ladder | Lets units climb two or more levels to or from a neighbouring tile |
@@ -30,11 +30,29 @@ Natural features: what magic draws on. One feature per tile at most.
 | feeds | Elements it feeds, joined with `+`: root, echo, kinship, wind, light, darkness |
 | blocks | Blocks movement, like a tree |
 | cover, object | As for terrain |
-| extra_move_cost | Extra half-points to step onto its tile, like dense growth |
+| extra_move_cost | Extra tiles of movement to step onto its tile, like dense growth |
 | uses | Uses for light spells, regained each round up to this number |
 | regen | Uses regained at the end of each round |
 | hp | HP that dark spells drain; a drained feature dies. 0 means dark spells can't use it |
 | creature | none, or how it moves on its own: drift (fireflies), flee_attack (birds), flee_near (deer) |
+
+## units.csv
+
+| Column | Meaning |
+| --- | --- |
+| id, name | Code name and display name. `hero` and `loper` must exist |
+| side | party or enemy |
+| hp | Starting and maximum HP |
+| move | Movement per turn, in tiles |
+| weight | light, medium or heavy. Heavier units push and drag lighter ones |
+| defence | Subtracted from damage taken |
+| power | Enemies act in order of power, strongest first |
+| tags | Joined with `+`: hero, companion, humanoid, beast, goblin |
+
+## rules.json
+
+Rule numbers that aren't tied to one unit or move. Comments (`// ...`) are allowed, and an unknown
+key is an error, so typos can't slip through. Each key is explained in the file.
 
 ## arenas/*.txt
 

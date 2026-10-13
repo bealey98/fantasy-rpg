@@ -33,7 +33,7 @@ dotnet run --project src/Battle.Sim -- render river-crossing   # draw an arena
 
 1. The repository, the C# solution and one check script. **Done.**
 2. Arena files: the parser, its checks and a static ASCII render. **Done.**
-3. Battle state, movement and pathfinding with heights, ladders and movement costs.
+3. Battle state, movement and pathfinding with heights, ladders and movement costs. **Done.**
 4. The turn loop, both logs, the replay viewer and terminal play. Fuzzing starts.
 5. Weapon moves, weight classes, collisions, falling and no ground.
 6. Features and sources, then the Elderwood's Tiers 1 and 2.

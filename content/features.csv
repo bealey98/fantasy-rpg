@@ -1,7 +1,7 @@
 glyph,id,name,feeds,blocks,cover,object,extra_move_cost,uses,regen,hp,creature
 T,ancient_tree,Ancient tree,root,yes,high,yes,0,3,1,20,none
 t,young_tree,Young tree,root,yes,high,yes,0,1,1,8,none
-%,thicket,Thicket,root,no,low,no,2,2,1,10,none
+%,thicket,Thicket,root,no,low,no,1,2,1,10,none
 m,moss,Moss and ivy,root,no,none,no,0,1,1,6,none
 w,meadow,Wild meadow,root,no,none,no,0,1,1,4,none
 s,stream,Stream,echo,no,none,no,0,2,1,0,none
