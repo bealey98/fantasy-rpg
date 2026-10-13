@@ -1,0 +1,10 @@
+<!--
+  Battle.Core: the battle rules. No engine, no files, no clock.
+  The game (Godot, later), the simulator, the terminal app and the tests all use it,
+  so they can never disagree about the rules.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Battle.Core</RootNamespace>
+  </PropertyGroup>
+</Project>

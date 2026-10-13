@@ -1,0 +1,16 @@
+<!--
+  Battle.Tests: rule tests, golden replays, determinism checks and fuzzing.
+  It is a plain console app with a tiny built-in test runner, so it needs no packages.
+  See TestRunner.cs for how to run it.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Battle.Tests</RootNamespace>
+    <AssemblyName>battle-tests</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Battle.Core\Battle.Core.csproj" />
+    <ProjectReference Include="..\..\src\Battle.Content\Battle.Content.csproj" />
+  </ItemGroup>
+</Project>

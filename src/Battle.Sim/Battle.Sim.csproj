@@ -1,0 +1,15 @@
+<!--
+  Battle.Sim: the command-line simulator.
+  Runs batches of battles, writes their logs, renders arenas and runs the benchmark.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Battle.Sim</RootNamespace>
+    <AssemblyName>battle-sim</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Battle.Core\Battle.Core.csproj" />
+    <ProjectReference Include="..\Battle.Content\Battle.Content.csproj" />
+  </ItemGroup>
+</Project>

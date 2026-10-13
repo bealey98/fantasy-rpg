@@ -1,0 +1,18 @@
+<!--
+  Settings shared by every C# project in the repository.
+  Keeping them here means each .csproj file stays a few lines long.
+-->
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- No culture-specific number or text formatting anywhere: logs must read the same on every machine. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Deterministic>true</Deterministic>
+    <WarningLevel>5</WarningLevel>
+    <!-- Missing XML doc comments are not warnings; the code uses plain comments. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>

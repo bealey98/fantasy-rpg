@@ -1,0 +1,14 @@
+<!--
+  Battle.Play: play a battle in the terminal by picking from the legal actions.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Battle.Play</RootNamespace>
+    <AssemblyName>battle-play</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Battle.Core\Battle.Core.csproj" />
+    <ProjectReference Include="..\Battle.Content\Battle.Content.csproj" />
+  </ItemGroup>
+</Project>

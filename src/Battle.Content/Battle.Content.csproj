@@ -1,0 +1,12 @@
+<!--
+  Battle.Content: everything that touches files.
+  Content files in (arenas, units, moves, rules) and log files out (input logs, event logs, snapshots).
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Battle.Content</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Battle.Core\Battle.Core.csproj" />
+  </ItemGroup>
+</Project>
