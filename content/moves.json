@@ -32,6 +32,23 @@
     "text": "A rusty stab at a neighbouring enemy."
   },
 
+  // ---- The Loper ----
+  {
+    "id": "gore", "name": "Gore", "slot": "main", "kind": "charge", "mount": "dismounted",
+    "damage": 2, "charge": 3, "command": true, "status": "knocked_over",
+    "text": "Charge up to 3 tiles in a straight line and gore an enemy with the antlers, knocking it over. Dismounted only."
+  },
+  {
+    "id": "taunt", "name": "Taunt", "slot": "main", "kind": "taunt",
+    "range": 3, "rounds": 1,
+    "text": "Bark and stamp at an enemy within 3 tiles: for a round it must attack the Loper whenever it can."
+  },
+  {
+    "id": "brace", "name": "Brace", "slot": "bonus", "kind": "brace", "mount": "dismounted",
+    "amount": 1, "rounds": 1,
+    "text": "Vines anchor the Loper: +1 defence, but it can't move or be moved until its next turn. Dismounted only."
+  },
+
   // ---- The Path of the Elderwood (Root). Tier 1 at the start of the game; Tier 2 in its chapter. ----
   {
     "id": "bind", "name": "Bind", "slot": "bonus", "kind": "bind", "tier": 1,

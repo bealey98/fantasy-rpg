@@ -145,7 +145,8 @@ public static partial class Rules
         ref var u = ref s.Units[unit];
         if (Anchored(s, unit)) return 0;
         int move = MountedMovement(s, unit);
-        if (u.Slowed > 0) move -= s.Data.Rules.SlowAmount;
+        int partner = u.MountedOn >= 0 ? u.MountedOn : u.Rider;
+        if (u.Slowed > 0 || (partner >= 0 && s.Units[partner].Slowed > 0)) move -= s.Data.Rules.SlowAmount;
         return Math.Max(0, move);
     }
 

@@ -1,6 +1,6 @@
 id,name,side,hp,move,weight,defence,power,tags,moves
 hero,Hero,party,10,4,medium,0,0,hero+humanoid,
-loper,Loper,party,8,6,heavy,0,0,companion+beast,
+loper,Loper,party,8,6,heavy,0,0,companion+beast,gore+taunt+brace
 cutter,Cutter,enemy,4,4,light,0,2,goblin+humanoid,shiv
 plinker,Plinker,enemy,3,4,light,0,1,goblin+humanoid,shiv
 beastmaster,Beastmaster,enemy,4,4,light,0,3,goblin+humanoid,shiv

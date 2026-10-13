@@ -16,6 +16,8 @@ public static partial class Rules
             case MoveKind.Parry: ParryTargets(s, actor, output); break;
             case MoveKind.Bind: BindTargets(s, actor, move, output); break;
             case MoveKind.Tether: TetherTargets(s, actor, move, output); break;
+            case MoveKind.Taunt: TauntTargets(s, actor, move, output); break;
+            case MoveKind.Brace: BraceTargets(s, actor, output); break;
             default: break; // not in the game yet
         }
     }
@@ -29,6 +31,8 @@ public static partial class Rules
             case MoveKind.Parry: ExecuteParry(s, a, move); break;
             case MoveKind.Bind: ExecuteBind(s, a, move); break;
             case MoveKind.Tether: ExecuteTether(s, a, move); break;
+            case MoveKind.Taunt: ExecuteTaunt(s, a, move); break;
+            case MoveKind.Brace: ExecuteBrace(s, a, move); break;
             default: throw new IllegalActionException($"{move.Name} ({move.Kind}) isn't implemented yet");
         }
     }
@@ -61,6 +65,4 @@ public static partial class Rules
     /// <summary>Can an area move aimed at a tile hurt the party? (Burrow, later.)</summary>
     private static bool AreaCanHurtParty(BattleState s, in BattleAction a, MoveDef move) => false;
 
-    /// <summary>A taunted unit's attacks must target its taunter when they can. (The Loper's Taunt, later.)</summary>
-    private static void ApplyTaunt(BattleState s, int actor, MoveDef move, List<(Target, Target)> output) { }
 }
