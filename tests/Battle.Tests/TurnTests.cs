@@ -50,24 +50,114 @@ public class TurnTests
         Assert.Equal(Phase.Party, s.Phase, "with the party phase");
     }
 
-    [Test]
-    public void SwappingOrderLetsTheLoperGoFirst()
+    private static BattleAction Swap(BattleState s) =>
+        Legal(s).Single(a => a.Kind == ActionKind.SwapPartner);
+
+    private static List<BattleAction> Legal(BattleState s)
     {
-        var s = TestBattles.Create(TestBattles.Field(6, 3, "H....a", "L.....", "......"));
-        s.Units[0].Set(UnitFlags.Dazed); // the hero's turn start uses up the daze...
-        Rules.Start(s);
-        Assert.True(s.Units[0].Has(UnitFlags.BonusUsed), "dazed: no bonus this turn");
         var legal = new List<BattleAction>();
         Rules.LegalActions(s, legal);
-        var swap = legal.Single(a => a.Kind == ActionKind.SwapOrder);
-        Rules.Apply(s, swap);
-        Assert.Equal(1, Rules.CurrentActor(s), "the Loper acts first now");
-        Assert.True(s.Units[0].Has(UnitFlags.Dazed), "...but swapping undid the hero's turn start, so he's still dazed");
-        Rules.LegalActions(s, legal);
-        Assert.False(legal.Any(a => a.Kind == ActionKind.SwapOrder), "only one swap per phase");
+        return legal;
+    }
+
+    [Test]
+    public void BothPartyTurnsStartTogether()
+    {
+        var s = TestBattles.Create(TestBattles.Field(6, 3, "H....a", "L.....", "......"));
+        s.Units[0].Set(UnitFlags.Dazed);
+        s.Units[1].Set(UnitFlags.KnockedOver);
+        Rules.Start(s);
+        Assert.Equal(0, Rules.CurrentActor(s), "the hero has the controls first");
+        Assert.True(s.Units[0].Has(UnitFlags.BonusUsed), "his daze has already cost him his bonus action");
+        Assert.Equal(s.Units[1].MoveMax - s.Data.Rules.KnockedOverDrain, s.Units[1].MoveLeft, "and the Loper has already got up");
+        var starts = TestBattles.Events(s).Where(e => e.Type == EventType.TurnStart).Select(e => e.Actor).ToList();
+        Assert.Equal("0,1", string.Join(",", starts), "both turns start with the phase");
+    }
+
+    [Test]
+    public void ThePartyCanHandOverMidTurnAndBack()
+    {
+        var s = TestBattles.Create(TestBattles.Field(8, 3, "H......a", "L.......", "........"));
+        Rules.Start(s);
+        Rules.Apply(s, BattleAction.MoveTo(0, new Pos(1, 0)));
+        int heroLeft = s.Units[0].MoveLeft;
+        Rules.Apply(s, Swap(s));
+        Assert.Equal(1, Rules.CurrentActor(s), "the Loper takes over");
+        Assert.Equal(1, TestBattles.Events(s).Count(e => e.Type == EventType.SwapPartner), "a swap event");
+        Rules.Apply(s, BattleAction.MoveTo(1, new Pos(2, 1)));
+        Rules.Apply(s, Swap(s));
+        Assert.Equal(0, Rules.CurrentActor(s), "and hands back to the hero");
+        Assert.Equal(heroLeft, s.Units[0].MoveLeft, "who carries on with the movement he had left");
+        Assert.Equal(s.Units[1].MoveMax - 4, s.Units[1].MoveLeft, "the Loper keeps what it has left too");
+        Rules.Apply(s, Swap(s));
+        Rules.Apply(s, Swap(s));
+        Assert.Equal(0, Rules.CurrentActor(s), "as often as the player likes");
+    }
+
+    [Test]
+    public void EndingATurnHandsOverToThePartnerUntilBothAreDone()
+    {
+        var s = TestBattles.Create(TestBattles.Field(6, 3, "H....a", "L.....", "......"));
+        Rules.Start(s);
+        Rules.Apply(s, Swap(s));
         EndTurn(s);
-        Assert.Equal(0, Rules.CurrentActor(s), "then the hero");
-        Assert.True(s.Units[0].Has(UnitFlags.BonusUsed), "and his daze applies now");
+        Assert.Equal(0, Rules.CurrentActor(s), "the Loper went first and ended, so the hero has the controls");
+        Assert.False(Legal(s).Any(a => a.Kind == ActionKind.SwapPartner), "no handing back to a turn that has ended");
+        EndTurn(s);
+        Assert.Equal(Phase.Enemy, s.Phase, "both done: the enemy phase");
+        Assert.False(Legal(s).Any(a => a.Kind == ActionKind.SwapPartner), "enemies have no partner to swap to");
+    }
+
+    [Test]
+    public void SlowedHalvesMovement()
+    {
+        var s = TestBattles.Create(TestBattles.Field(6, 3, "H....a", "L.....", "......"));
+        s.Units[0].Slowed = Rules.Rounds(1);
+        s.Units[1].Slowed = Rules.Rounds(1);
+        Rules.Start(s);
+        Assert.Equal(s.Units[0].MoveMax / 2, s.Units[0].MoveLeft, "the hero gets half his 4 tiles");
+        Assert.Equal(s.Units[1].MoveMax / 2, s.Units[1].MoveLeft, "the Loper half its 6");
+        Assert.Equal(6, s.Units[1].MoveLeft, "3 tiles, in half-points");
+    }
+
+    [Test]
+    public void ThePartyCanFleeFromTheEdgeWithNoEnemyClose()
+    {
+        var s = TestBattles.Create(TestBattles.Field(9, 3, ".........", "HL......a", "........."));
+        Rules.Start(s);
+        Assert.False(Legal(s).Any(a => a.Kind == ActionKind.Flee), "the Loper isn't on the edge");
+        Rules.Apply(s, Swap(s));
+        Rules.Apply(s, BattleAction.MoveTo(1, new Pos(1, 0)));
+        var flee = Legal(s).Single(a => a.Kind == ActionKind.Flee);
+        Rules.Apply(s, flee);
+        Assert.Equal(Outcome.PartyFled, s.Outcome, "away they go");
+        Assert.Equal(-1, Rules.CurrentActor(s), "the battle is over");
+        Assert.Equal("party_fled", TestBattles.Events(s).Last().Detail, "the last event says how it ended");
+    }
+
+    [Test]
+    public void NoFleeingWithAnEnemyWithinThreeTilesOrOffTheEdge()
+    {
+        bool CanFlee(string row1, string row2, string row3)
+        {
+            var s = TestBattles.Create(TestBattles.Field(7, 3, row1, row2, row3));
+            Rules.Start(s);
+            return Legal(s).Any(a => a.Kind == ActionKind.Flee);
+        }
+        Assert.False(CanFlee("H......", "..a....", "......."), "3 steps away is too close");
+        Assert.True(CanFlee("H......", "...a...", "......."), "4 steps away is far enough");
+        Assert.False(CanFlee(".......", ".H....a", "......."), "the hero isn't on the edge");
+
+        // A burrowed enemy counts where it will surface.
+        var b = TestBattles.Create(TestBattles.Field(7, 3, "H......", "......s", "......."), enemies: new() { ['s'] = "snuffler" });
+        Rules.Start(b);
+        Assert.True(Legal(b).Any(a => a.Kind == ActionKind.Flee), "the Snuffler is far away");
+        int sn = b.Info.UnitIndex("s");
+        b.RemoveFromBoard(sn);
+        b.Units[sn].Set(UnitFlags.Burrowed);
+        b.Units[sn].BurrowTo = new Pos(1, 1);
+        b.Rumble[b.Idx(new Pos(1, 1))] = sn;
+        Assert.False(Legal(b).Any(a => a.Kind == ActionKind.Flee), "but it's coming up 2 steps from the hero");
     }
 
     [Test]

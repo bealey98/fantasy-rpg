@@ -46,7 +46,7 @@ Natural features: what magic draws on. One feature per tile at most.
 | move | Movement per turn, in tiles |
 | weight | light, medium or heavy. Heavier units push and drag lighter ones |
 | defence | Subtracted from damage taken |
-| power | Enemies act in order of power, strongest first |
+| power | Enemies act in order of power, strongest first. A beast acts straight after its handler, and the pair goes where the stronger of the two would |
 | tags | Joined with `+`: hero, companion, humanoid, beast, goblin |
 | moves | Move ids from moves.json, joined with `+` (the hero's come from the encounter instead) |
 

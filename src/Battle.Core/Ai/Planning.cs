@@ -21,6 +21,7 @@ public abstract class PlannedController : IController
 
     public BattleAction Choose(BattleState s, int actor, IReadOnlyList<BattleAction> legal)
     {
+        if (legal.Count == 1) return legal[0]; // no choice to make (a beast following its orders)
         long turn = ((long)s.Round << 32) | ((long)s.Phase << 28) | ((long)s.OrderPos << 16) | (uint)actor;
         if (turn != _turn)
         {
@@ -74,7 +75,6 @@ public sealed class Tactics
 {
     public const int Far = Rules.Unreachable;
 
-    private readonly int[] _heap = new int[4 * 4096];
     private readonly List<(Target, Target)> _targets = new();
 
     // ------------------------------------------------------------------
@@ -110,41 +110,10 @@ public sealed class Tactics
 
     /// <summary>
     /// For every tile, the cheapest movement (half-points) for this unit to get from there onto one
-    /// of the goal tiles by its own movement rules, or Far. Traps stop movement, so paths don't run
-    /// through them, unless <paramref name="trapCost"/> says what stopping on one is worth (a turn
-    /// lost, a bite taken) for a unit willing to.
+    /// of the goal tiles, or Far. See <see cref="Rules.CostToGo"/>.
     /// </summary>
-    public void CostToGo(BattleState s, int unit, bool[] goals, int[] field, int trapCost = -1)
-    {
-        int size = 0;
-        for (int tile = 0; tile < s.TileCount; tile++)
-        {
-            field[tile] = Far;
-            if (!goals[tile]) continue;
-            field[tile] = 0;
-            HeapPush(ref size, tile);
-        }
-        while (size > 0)
-        {
-            int key = HeapPop(ref size);
-            int tile = key & 1023, cost = key >> 10;
-            if (cost > field[tile]) continue;
-            bool trap = !goals[tile] && s.Trap[tile] != TrapKind.None;
-            if (trap && trapCost < 0) continue;
-            int extra = trap ? trapCost : 0;
-            var here = s.PosOf(tile);
-            foreach (var d in Dirs.All)
-            {
-                var before = here.Step(d);
-                if (!s.InBounds(before)) continue;
-                int b = s.Idx(before);
-                int step = Rules.StepCost(s, unit, b, tile);
-                if (step < 0 || cost + step + extra >= field[b]) continue;
-                field[b] = cost + step + extra;
-                HeapPush(ref size, (field[b] << 10) | b);
-            }
-        }
-    }
+    public void CostToGo(BattleState s, int unit, bool[] goals, int[] field, int trapCost = -1) =>
+        Rules.CostToGo(s, unit, goals, field, trapCost);
 
     /// <summary>
     /// The cheapest cost from a reach map (see <see cref="ReachFrom"/>) to a tile next to
@@ -230,17 +199,17 @@ public sealed class Tactics
     {
         ref var u = ref s.Units[unit];
         if (u.Rooted > 1 || u.Braced > 1) return 0; // still held when its next turn comes
-        int move = u.MoveMax + (Rules.KitMove(s, unit, MoveKind.Scamper)?.Amount ?? 0);
-        if (u.Slowed > 1) move -= s.Data.Rules.SlowAmount;
-        if (u.Has(UnitFlags.KnockedOver)) move -= s.Data.Rules.KnockedOverDrain;
-        return Math.Max(0, move);
+        int move = u.MoveMax;
+        if (u.Slowed > 1) move = Rules.SlowedMovement(move);
+        if (u.Has(UnitFlags.KnockedOver)) move = Math.Max(0, move - s.Data.Rules.KnockedOverDrain);
+        return move + (Rules.KitMove(s, unit, MoveKind.Scamper)?.Amount ?? 0);
     }
 
     /// <summary>
     /// A quick, generous guess at the damage a unit standing on <paramref name="at"/> could take before
-    /// its next turn: each enemy that could get close enough to use one of its attacks counts its best
-    /// one, and a burrowed beast threatens the blast around its rumbling tile. Distances are counted
-    /// in straight steps, so walls and climbs are ignored.
+    /// its next turn: each enemy that could get close enough counts its best main attack plus its
+    /// best bonus attack, and a burrowed beast threatens the blast around its rumbling tile.
+    /// Distances are counted in straight steps, so walls and climbs are ignored.
     /// </summary>
     public static int Threat(BattleState s, int unit, Pos at)
     {
@@ -256,25 +225,35 @@ public sealed class Tactics
                 continue;
             }
             if (!en.OnBoard || en.Has(UnitFlags.Fleeing)) continue;
-            int walk = NextTurnMovement(s, e) / 2;
-            int distance = en.Pos.Manhattan(at);
-            int best = 0;
-            foreach (int m in s.Info.Kits[e])
-            {
-                var move = s.Data.Moves[m];
-                if (!move.UsesMain || move.Damage <= 0) continue;
-                int reach = move.Kind switch
-                {
-                    MoveKind.Melee => 1,
-                    MoveKind.Ranged => move.Range,
-                    MoveKind.Charge => move.Charge + 1,
-                    _ => 0, // a burrow lands a turn later
-                };
-                if (reach > 0 && distance <= walk + reach) best = Math.Max(best, Damage(s, e, unit, move));
-            }
-            total += best;
+            total += BestHits(s, e, unit, en.Pos.Manhattan(at), NextTurnMovement(s, e) / 2);
         }
         return total;
+    }
+
+    /// <summary>
+    /// The most an enemy could do to a unit this many straight steps away, walking this many tiles
+    /// first: its best main attack plus its best bonus attack in reach.
+    /// </summary>
+    public static int BestHits(BattleState s, int enemy, int unit, int distance, int walk)
+    {
+        int main = 0, bonus = 0;
+        foreach (int m in s.Info.Kits[enemy])
+        {
+            var move = s.Data.Moves[m];
+            if (move.Damage <= 0) continue;
+            int reach = move.Kind switch
+            {
+                MoveKind.Melee => 1,
+                MoveKind.Ranged => move.Range,
+                MoveKind.Charge => move.Charge + 1,
+                _ => 0, // a burrow lands a turn later
+            };
+            if (reach <= 0 || distance > walk + reach) continue;
+            int damage = Damage(s, enemy, unit, move);
+            if (move.UsesMain) main = Math.Max(main, damage);
+            else bonus = Math.Max(bonus, damage);
+        }
+        return main + bonus;
     }
 
     /// <summary>The living, on-board unit nearest to a tile by straight steps, among those the filter accepts; -1 if none.</summary>
@@ -299,39 +278,5 @@ public sealed class Tactics
             if (move.Kind == kind && (slot == null || move.Slot == slot) && Rules.MoveAvailable(s, unit, move)) return move;
         }
         return null;
-    }
-
-    // ------------------------------------------------------------------
-    // A small binary heap of ints (smallest first): cost * 1024 + tile
-    // ------------------------------------------------------------------
-
-    private void HeapPush(ref int size, int key)
-    {
-        int i = size++;
-        _heap[i] = key;
-        while (i > 0)
-        {
-            int parent = (i - 1) >> 1;
-            if (_heap[parent] <= _heap[i]) break;
-            (_heap[parent], _heap[i]) = (_heap[i], _heap[parent]);
-            i = parent;
-        }
-    }
-
-    private int HeapPop(ref int size)
-    {
-        int top = _heap[0];
-        _heap[0] = _heap[--size];
-        int i = 0;
-        while (true)
-        {
-            int left = 2 * i + 1, right = left + 1, smallest = i;
-            if (left < size && _heap[left] < _heap[smallest]) smallest = left;
-            if (right < size && _heap[right] < _heap[smallest]) smallest = right;
-            if (smallest == i) break;
-            (_heap[smallest], _heap[i]) = (_heap[i], _heap[smallest]);
-            i = smallest;
-        }
-        return top;
     }
 }

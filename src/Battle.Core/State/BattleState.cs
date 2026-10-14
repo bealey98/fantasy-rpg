@@ -2,8 +2,8 @@ namespace Battle.Core;
 
 /// <summary>
 /// Everything about a battle in progress. The board and the units are held in flat arrays,
-/// so <see cref="Clone"/> is cheap: previews, undo, danger zones and any AI that looks ahead
-/// copy the state, try something and throw the copy away.
+/// so <see cref="Clone"/> is cheap: previews, danger zones and any AI that looks ahead copy the
+/// state, try something and throw the copy away.
 ///
 /// Board arrays are indexed by tile: index = y * Width + x.
 /// The rules that change this state live in the Rules class, not here.
@@ -45,27 +45,20 @@ public sealed class BattleState
     // ---- Turn bookkeeping ----
     public int Round;
     public Phase Phase;
-    /// <summary>The units acting in the current phase, in order.</summary>
+    /// <summary>
+    /// The units acting in the current phase, in order. In the party phase it's the hero then the
+    /// Loper, whose turns run side by side: OrderPos says which of them has the controls.
+    /// </summary>
     public int[] Order;
     public int OrderCount;
     /// <summary>Which entry of Order is acting now.</summary>
     public int OrderPos;
-    /// <summary>The player chose to have the Loper act before the hero.</summary>
-    public bool LoperFirst;
-    /// <summary>Someone has acted in the current phase (the party order can only be swapped before that).</summary>
-    public bool PhaseActed;
     public Outcome Outcome;
     /// <summary>How many dark moves have been used: the battle's nudge to the corruption meter.</summary>
     public int DarkUses;
     public Rng Rng;
     /// <summary>Event counter, so every event in a battle has its own sequence number.</summary>
     public int Seq;
-
-    /// <summary>
-    /// The acting unit as it was just before its turn started, so swapping the party order before
-    /// anyone has acted can undo the start of that turn exactly.
-    /// </summary>
-    public Unit TurnStartBackup;
 
     /// <summary>Where events go. Not part of the state proper: copies get the null sink.</summary>
     public IEventSink Sink = NullSink.Instance;
@@ -124,13 +117,10 @@ public sealed class BattleState
         Order = (int[])other.Order.Clone();
         OrderCount = other.OrderCount;
         OrderPos = other.OrderPos;
-        LoperFirst = other.LoperFirst;
-        PhaseActed = other.PhaseActed;
         Outcome = other.Outcome;
         DarkUses = other.DarkUses;
         Rng = other.Rng;
         Seq = other.Seq;
-        TurnStartBackup = other.TurnStartBackup;
     }
 
     /// <summary>A full, independent copy. Events from the copy go nowhere unless you give it a sink.</summary>
@@ -254,7 +244,7 @@ public sealed class BattleState
             h.Add((int)u.Flags); h.Add(u.Rooted); h.Add(u.Slowed); h.Add(u.Blinded); h.Add(u.Braced);
             h.Add(u.Taunted); h.Add(u.Buffed); h.Add(u.WeaponBindTimer); h.Add(u.TauntBy); h.Add(u.BuffAmount);
             h.Add(u.BraceDefence); h.Add(u.MountedOn); h.Add(u.Rider); h.Add(u.BurrowTo.X); h.Add(u.BurrowTo.Y);
-            h.Add(u.Handler); h.Add((int)u.Order); h.Add(u.OrderUnit); h.Add(u.OrderTile.X); h.Add(u.OrderTile.Y);
+            h.Add(u.Handler); h.Add(u.OrderUnit); h.Add(u.OrderTile.X); h.Add(u.OrderTile.Y);
         }
         h.Add(TetherCount);
         for (int i = 0; i < TetherCount; i++)
@@ -266,7 +256,7 @@ public sealed class BattleState
         }
         h.Add(Round); h.Add((int)Phase); h.Add(OrderCount); h.Add(OrderPos);
         for (int i = 0; i < OrderCount; i++) h.Add(Order[i]);
-        h.Add(LoperFirst ? 1 : 0); h.Add(PhaseActed ? 1 : 0); h.Add((int)Outcome); h.Add(DarkUses);
+        h.Add((int)Outcome); h.Add(DarkUses);
         h.Add((long)Rng.State);
         h.Add(Seq);
         return h.Value;

@@ -19,6 +19,13 @@ public static partial class Rules
         int actor = CurrentActor(s);
         if (actor < 0) return;
 
+        // A beast makes no choices of its own: its one legal action is what its orders say.
+        if (ActsByRule(s, actor))
+        {
+            output.Add(BeastAction(s, actor));
+            return;
+        }
+
         if (CanMove(s, actor))
         {
             var tiles = _tileBuffer ??= new List<Pos>();
@@ -70,23 +77,56 @@ public static partial class Rules
         ApplyTaunt(s, actor, move, output);
     }
 
-    /// <summary>The party's extra choices: swapping who acts first, and mounting or dismounting.</summary>
+    /// <summary>The party's extra choices: handing over to the partner, fleeing, and mounting or dismounting.</summary>
     private static void AddPartyActions(BattleState s, int actor, List<BattleAction> output)
     {
-        if (CanSwapOrder(s, actor))
-            output.Add(new BattleAction(ActionKind.SwapOrder, actor, -1, Target.None, Target.None, Timing.None));
+        int partner = SwapTarget(s, actor);
+        if (partner >= 0)
+            output.Add(new BattleAction(ActionKind.SwapPartner, actor, -1, Target.OfUnit(partner), Target.None, Timing.None));
+        if (CanFlee(s, actor))
+            output.Add(new BattleAction(ActionKind.Flee, actor, -1, Target.None, Target.None, Timing.None));
         AddMountActions(s, actor, output);
     }
 
     /// <summary>
-    /// The hero and the Loper can swap who acts first, but only at the very start of the party
-    /// phase, before either has done anything, and only once per phase.
+    /// The partner the acting unit can hand over to: the other of the hero and the Loper, if its turn
+    /// is still going. -1 outside the party phase, or once the partner has ended its turn (or can't
+    /// take one).
     /// </summary>
-    public static bool CanSwapOrder(BattleState s, int actor)
+    public static int SwapTarget(BattleState s, int actor)
     {
-        int loper = s.Info.LoperIndex;
-        return s.Phase == Phase.Party && !s.PhaseActed && s.OrderPos == 0 && loper >= 0
-            && s.Units[loper].Alive && s.Units[actor].Side == Side.Party;
+        if (s.Phase != Phase.Party || s.Units[actor].Side != Side.Party) return -1;
+        for (int i = 0; i < s.OrderCount; i++)
+        {
+            int other = s.Order[i];
+            if (other != actor && PartyTurnOpen(s, other)) return other;
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// The party can flee when everyone in it who's on the board stands on the arena's edge and no
+    /// enemy is within range of any of them, counted in straight steps. A burrowed enemy counts
+    /// where it will surface. A knocked-out Loper doesn't hold the party back.
+    /// </summary>
+    public static bool CanFlee(BattleState s, int actor)
+    {
+        if (s.Phase != Phase.Party || s.Units[actor].Side != Side.Party) return false;
+        int range = s.Data.Rules.PartyFleeRange;
+        for (int i = 0; i < s.Units.Length; i++)
+        {
+            ref var p = ref s.Units[i];
+            if (p.Side != Side.Party || !p.Alive || !p.OnBoard) continue;
+            if (!s.OnEdge(p.Pos)) return false;
+            for (int e = 0; e < s.Units.Length; e++)
+            {
+                ref var en = ref s.Units[e];
+                if (!en.Alive || !AreEnemies(s, i, e)) continue;
+                var at = en.OnBoard ? en.Pos : en.Has(UnitFlags.Burrowed) ? en.BurrowTo : Pos.None;
+                if (at != Pos.None && at.Manhattan(p.Pos) <= range) return false;
+            }
+        }
+        return true;
     }
 
     // ------------------------------------------------------------------
@@ -102,6 +142,8 @@ public static partial class Rules
         int actor = CurrentActor(s);
         if (actor < 0) throw new IllegalActionException("the battle isn't running");
         if (a.Actor != actor) throw new IllegalActionException($"it's {s.Label(actor)}'s turn, not {s.Label(a.Actor)}'s");
+        if (ActsByRule(s, actor) && !a.SameChoice(BeastAction(s, actor)))
+            throw new IllegalActionException($"{s.Label(actor)} has no choices of its own: it follows its orders");
 
         switch (a.Kind)
         {
@@ -113,8 +155,11 @@ public static partial class Rules
                 if (a.Target.Kind != TargetKind.Tile || !MoveTo(s, actor, a.Target.Tile))
                     throw new IllegalActionException($"{s.Label(actor)} can't move to {a.Target.Tile}");
                 break;
-            case ActionKind.SwapOrder:
-                SwapOrder(s, actor);
+            case ActionKind.SwapPartner:
+                SwapPartner(s, actor, a.Target);
+                return;
+            case ActionKind.Flee:
+                Flee(s, actor);
                 return;
             case ActionKind.Mount:
             case ActionKind.Dismount:
@@ -124,7 +169,6 @@ public static partial class Rules
                 UseMove(s, a);
                 break;
         }
-        s.PhaseActed = true;
         AfterAction(s, actor);
     }
 
@@ -173,16 +217,22 @@ public static partial class Rules
             ApplyStatus(s, a.Actor, a.Actor, move.SelfStatus, move.SelfStatusRounds, move.Index);
     }
 
-    private static void SwapOrder(BattleState s, int actor)
+    /// <summary>Hands the controls to the partner, mid-turn. Nothing else changes: both turns carry on where they were.</summary>
+    private static void SwapPartner(BattleState s, int actor, Target target)
     {
-        if (!CanSwapOrder(s, actor)) throw new IllegalActionException("the party order can only be swapped before anyone acts");
-        // Undo the start of this unit's turn exactly, then start the other unit's turn instead.
-        s.Units[actor] = s.TurnStartBackup;
-        s.LoperFirst = !s.LoperFirst;
-        s.PhaseActed = true;
-        s.Emit(EventType.SwapOrder, actor, detail: s.LoperFirst ? "loper_first" : "hero_first");
-        BuildOrder(s, Side.Party);
-        s.OrderPos = 0;
-        AdvanceToNextActor(s);
+        int partner = SwapTarget(s, actor);
+        if (partner < 0 || target != Target.OfUnit(partner))
+            throw new IllegalActionException("there's no partner with its turn still going to hand over to");
+        s.OrderPos = Array.IndexOf(s.Order, partner, 0, s.OrderCount);
+        s.Emit(EventType.SwapPartner, actor, partner);
+    }
+
+    /// <summary>The party leaves the battle, which ends it.</summary>
+    private static void Flee(BattleState s, int actor)
+    {
+        if (!CanFlee(s, actor))
+            throw new IllegalActionException($"the party can only flee with everyone on the arena's edge and no enemy within {s.Data.Rules.PartyFleeRange} tiles");
+        s.Outcome = Outcome.PartyFled;
+        s.Emit(EventType.BattleEnd, actor, detail: "party_fled");
     }
 }

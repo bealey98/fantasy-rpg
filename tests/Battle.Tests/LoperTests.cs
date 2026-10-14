@@ -103,6 +103,48 @@ public class LoperTests
     }
 
     [Test]
+    public void MountingStopsTheLoperWalkingThisTurn()
+    {
+        var s = Start(TestBattles.Field(6, 2, "HL...a", "......"));
+        Rules.Apply(s, Legal(s).Single(x => x.Kind == ActionKind.SwapPartner));
+        Rules.Apply(s, BattleAction.MoveTo(1, new Pos(0, 1)));
+        Assert.True(s.Units[1].MoveLeft > 0, "the Loper has movement left");
+        Rules.Apply(s, Legal(s).Single(x => x.Kind == ActionKind.SwapPartner));
+        Rules.Apply(s, Legal(s).Single(x => x.Kind == ActionKind.Mount));
+        Assert.Equal(0, s.Units[1].MoveLeft, "carrying him, it can't walk any further this turn");
+        Rules.Apply(s, Legal(s).Single(x => x.Kind == ActionKind.SwapPartner));
+        Assert.False(Legal(s).Any(x => x.Kind == ActionKind.Move), "no walking for the Loper");
+    }
+
+    [Test]
+    public void DismountingGivesTheLoperItsOwnMovement()
+    {
+        var s = Start(TestBattles.Field(6, 2, "H....a", ".L...."), mounted: true);
+        Assert.Equal(0, s.Units[1].MoveLeft, "carrying the hero, the Loper starts its turn with no movement of its own");
+        Rules.Apply(s, Legal(s).First(x => x.Kind == ActionKind.Dismount));
+        Assert.Equal(s.Units[1].MoveMax, s.Units[1].MoveLeft, "free of him, it can walk this turn after all");
+        Rules.Apply(s, Legal(s).Single(x => x.Kind == ActionKind.SwapPartner));
+        Assert.True(Legal(s).Any(x => x.Kind == ActionKind.Move), "and does");
+    }
+
+    [Test]
+    public void KnockingOverARiddenLoperThrowsTheHeroBehindIt()
+    {
+        var s = Start(TestBattles.Field(5, 3, "H....", "..La.", "....."), mounted: true);
+        int a = s.Info.UnitIndex("a");
+        Rules.ApplyStatus(s, a, 1, StatusId.KnockedOver, 0);
+        Assert.Equal(-1, s.Units[0].MountedOn, "the hero is off");
+        Assert.Equal(new Pos(1, 1), s.Units[0].Pos, "behind the Loper, away from the goblin that knocked it over");
+        Assert.True(s.Units[0].Has(UnitFlags.KnockedOver), "and knocked over himself");
+        Assert.Equal(1, TestBattles.Events(s).Count(e => e.Type == EventType.Thrown), "a thrown event");
+        Invariants.Check(s);
+
+        var t = Start(TestBattles.Field(5, 3, "H....", ".xLa.", "....."), mounted: true);
+        Rules.ApplyStatus(t, t.Info.UnitIndex("a"), 1, StatusId.KnockedOver, 0);
+        Assert.Equal(new Pos(2, 0), t.Units[0].Pos, "with the tile behind taken, to the side");
+    }
+
+    [Test]
     public void EitherOfThePairCanBeTargeted()
     {
         var s = Start(TestBattles.Field(4, 2, "H...", "La.."), mounted: true);

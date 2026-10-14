@@ -16,9 +16,18 @@ public enum ActionKind : byte
     Special,
     Mount,
     Dismount,
-    /// <summary>Swap the hero and the Loper's order, before either has acted this phase.</summary>
-    SwapOrder,
-    /// <summary>End the turn.</summary>
+    /// <summary>
+    /// Hand over to the partner. The hero's and the Loper's turns both start with the party phase
+    /// and run side by side: either can hand over to the other at any point, as often as the player
+    /// likes, until the other has ended its turn.
+    /// </summary>
+    SwapPartner,
+    /// <summary>
+    /// The whole party leaves the battle. Only while everyone in the party who's on the board stands
+    /// on the arena's edge, with no enemy within range (rules.json "party_flee_range").
+    /// </summary>
+    Flee,
+    /// <summary>End this unit's turn. In the party phase the partner carries on, if its turn is still going.</summary>
     End,
 }
 

@@ -10,7 +10,8 @@ namespace Battle.Core.Ai;
 ///     it, Shoves when that does real harm, Parries when a melee hit is coming, and otherwise Binds
 ///     the enemy most likely to reach him. The Loper Braces when enemies are close.
 ///   - The hero steps back out of danger with any movement left after attacking.
-/// It never Tethers, mounts or swaps the party order: a real player will do better than it.
+/// It never Tethers, mounts, hands over mid-turn or flees: the hero plays his whole turn, then the
+/// Loper. A real player will do better than it.
 /// </summary>
 public sealed class PartyBot : PlannedController
 {
@@ -158,16 +159,7 @@ public sealed class PartyBot : PlannedController
     {
         ref var e = ref s.Units[enemy];
         if (!e.Alive || !e.OnBoard || e.Has(UnitFlags.Fleeing)) return 0;
-        int walk = Tactics.NextTurnMovement(s, enemy) / 2;
-        int best = 0;
-        foreach (int m in s.Info.Kits[enemy])
-        {
-            var move = s.Data.Moves[m];
-            if (!move.UsesMain || move.Damage <= 0) continue;
-            int reach = move.Kind switch { MoveKind.Melee => 1, MoveKind.Ranged => move.Range, MoveKind.Charge => move.Charge + 1, _ => 0 };
-            if (reach > 0 && e.Pos.Manhattan(at) <= walk + reach) best = Math.Max(best, Tactics.Damage(s, enemy, unit, move));
-        }
-        return best;
+        return Tactics.BestHits(s, enemy, unit, e.Pos.Manhattan(at), Tactics.NextTurnMovement(s, enemy) / 2);
     }
 
     /// <summary>

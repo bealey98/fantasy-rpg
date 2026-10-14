@@ -2,23 +2,23 @@ battle_id,round,phase,seq,actor,event,move,target,from_x,from_y,to_x,to_y,amount
 1,1,party,1,,round_start,,,,,,,1,,,,
 1,1,party,2,,phase_start,,,,,,,0,,,party,
 1,1,party,3,hero,turn_start,,hero,2,2,,,0,,,,
-1,1,party,4,hero,move,,hero,2,2,5,3,8,,,"path:3,2;4,2;5,2;5,3",
-1,1,party,5,hero,charge,bull_rush,hero,5,3,8,3,3,,,,
-1,1,party,6,hero,damage,bull_rush,b,9,3,9,3,2,2,good,,
-1,1,party,7,hero,collide,,b,9,3,,,0,,,the edge of the arena,
-1,1,party,8,hero,damage,,b,9,3,9,3,2,0,,collision,
-1,1,party,9,hero,death,,b,9,3,,,0,,,,
-1,1,party,10,hero,turn_end,,hero,,,,,0,,,,88f67a652b22e1a4
-1,1,party,11,loper,turn_start,,loper,2,3,,,0,,,,
+1,1,party,4,loper,turn_start,,loper,2,3,,,0,,,,
+1,1,party,5,hero,move,,hero,2,2,5,3,8,,,"path:3,2;4,2;5,2;5,3",
+1,1,party,6,hero,charge,bull_rush,hero,5,3,8,3,3,,,,
+1,1,party,7,hero,damage,bull_rush,b,9,3,9,3,2,2,good,,
+1,1,party,8,hero,collide,,b,9,3,,,0,,,the edge of the arena,
+1,1,party,9,hero,damage,,b,9,3,9,3,2,0,,collision,
+1,1,party,10,hero,death,,b,9,3,,,0,,,,
+1,1,party,11,hero,turn_end,,hero,,,,,0,,,,3436b40e6cafa4bf
 1,1,party,12,loper,move,,loper,2,3,6,2,10,,,"path:2,2;3,2;4,2;5,2;6,2",
 1,1,party,13,loper,status,taunt,a,8,1,,,1,,,taunted,
 1,1,party,14,loper,status,brace,loper,6,2,,,1,,,braced,
-1,1,party,15,loper,turn_end,,loper,,,,,0,,,,6e2e69f1ff1d523b
+1,1,party,15,loper,turn_end,,loper,,,,,0,,,,647c8b85c5c2ab6a
 1,1,creatures,16,,phase_start,,,,,,,0,,,creatures,
 1,1,enemy,17,,phase_start,,,,,,,0,,,enemy,
 1,1,enemy,18,a,turn_start,,a,8,1,,,0,,,,
 1,1,enemy,19,a,flee_start,,a,8,1,,,0,,,,
 1,1,enemy,20,a,move,,a,8,1,7,0,4,,,"path:8,0;7,0",
 1,1,enemy,21,a,fled,,a,7,0,,,0,,,,
-1,1,enemy,22,a,turn_end,,a,,,,,0,,,,085538616c35f57e
+1,1,enemy,22,a,turn_end,,a,,,,,0,,,,f16a5a9d671137f6
 1,1,enemy,23,,battle_end,,,,,,,0,,,party_won,

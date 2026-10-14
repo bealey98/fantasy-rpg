@@ -119,7 +119,6 @@ public static class BattleFactory
             s.Units[b].Handler = h;
         }
 
-        s.LoperFirst = encounter.Party.LoperFirst;
         s.Rng = new Rng(seed);
         s.Round = 0;
         s.Phase = encounter.FirstPhase == Side.Enemy ? Phase.Enemy : Phase.Party;

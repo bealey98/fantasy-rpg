@@ -67,17 +67,20 @@ public static class Describe
             EventType.Burrow => $"{target} burrows underground; the ground rumbles at {e.To}",
             EventType.Surface => $"{target} bursts out of the ground at {e.To}",
             EventType.Crater => $"the ground at {e.To} caves into a crater",
+            EventType.Order when e.Detail == "wild" => $"{actor}, wild, goes for {target}",
             EventType.Order => e.Target >= 0 ? $"{actor} points the beast at {target}" : $"{actor} points the beast at {e.To}",
             EventType.Buff => $"{actor} cracks the whip at {target} (+{e.Amount} damage on its next attack)",
             EventType.Mount => $"{actor} mounts {target}",
             EventType.Dismount => $"{actor} dismounts to {e.To}",
+            EventType.Thrown => $"{target} is thrown off to {e.To}",
             EventType.Scamper => $"{actor} scampers (+{e.Amount / 2.0:0.#} tiles of movement)",
-            EventType.SwapOrder => e.Detail == "loper_first" ? "the Loper will act first" : "the hero will act first",
+            EventType.SwapPartner => $"{actor} hands over to {target}",
             EventType.CreatureMove => $"the {e.Detail} move {e.From} → {e.To}",
             EventType.BattleEnd => e.Detail switch
             {
                 "party_won" => "Victory!",
                 "party_lost" => "Defeat.",
+                "party_fled" => "The party flees the battle.",
                 _ => "The battle ends in a draw.",
             },
             _ => null,
@@ -92,7 +95,8 @@ public static class Describe
         {
             ActionKind.End => "End turn",
             ActionKind.Move => $"Move to {a.Target.Tile}",
-            ActionKind.SwapOrder => s.LoperFirst ? "Swap order: the hero acts first" : "Swap order: the Loper acts first",
+            ActionKind.SwapPartner => $"Swap to the {Name(s, a.Target.Unit)}",
+            ActionKind.Flee => "Flee the battle",
             ActionKind.Mount => $"Mount the {Name(s, a.Target.Unit)}",
             ActionKind.Dismount => $"Dismount to {a.Target.Tile}",
             _ => a.Target2.Kind == TargetKind.None

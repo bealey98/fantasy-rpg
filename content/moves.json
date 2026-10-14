@@ -33,9 +33,9 @@
     "text": "A rusty stab at a neighbouring enemy. Gang up: +1 when another goblin is also next to the target."
   },
   {
-    "id": "headbutt", "name": "Headbutt", "slot": "special", "kind": "melee",
+    "id": "headbutt", "name": "Headbutt", "slot": "bonus", "kind": "melee",
     "damage": 1, "gang_up": 1, "status": "dazed", "self_status": "dazed",
-    "text": "Uses the main and bonus action. It hits pot-lid first: the target is dazed and loses its next bonus action. The Cutter is dazed too, so it can't Headbutt again next turn."
+    "text": "It hits pot-lid first: the target is dazed and loses its next bonus action. The Cutter is dazed too, so it can't Headbutt again next turn."
   },
   {
     "id": "after_you", "name": "After you", "slot": "bonus", "kind": "swap",

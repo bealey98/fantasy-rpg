@@ -98,10 +98,6 @@ public sealed class Game
                 _showDanger = !_showDanger;
                 _inspect = -1;
                 return;
-            case "u" or "undo":
-                if (_session.CanUndo()) { _session.Undo(); _message = "undone"; }
-                else _message = "nothing to undo in this turn";
-                return;
             case "l" or "log":
                 _message = string.Join("\n", _session.Log.Events.Select(e => Describe.Event(S, e)).OfType<string>().TakeLast(20));
                 return;
@@ -155,7 +151,8 @@ public sealed class Game
             if (a.Kind is ActionKind.Move or ActionKind.End) continue;
             string label = a.Kind switch
             {
-                ActionKind.SwapOrder => "Swap order",
+                ActionKind.SwapPartner => $"Swap to the {Describe.Name(S, a.Target.Unit)}",
+                ActionKind.Flee => "Flee the battle",
                 ActionKind.Mount => "Mount",
                 ActionKind.Dismount => "Dismount",
                 _ => S.Data.Moves[a.Move].Name + (S.Data.Moves[a.Move].Slot switch
@@ -220,8 +217,10 @@ public sealed class Game
 
         var sb = new System.Text.StringBuilder();
         string phase = Rules.PhaseName(S.Phase);
+        int partner = actor >= 0 ? Rules.SwapTarget(S, actor) : -1;
+        string alongside = partner >= 0 ? $" (the {Describe.Name(S, partner)}'s is going too)" : "";
         sb.AppendLine(actor >= 0
-            ? $"round {S.Round} · {phase} phase · {Describe.Name(S, actor)}'s turn"
+            ? $"round {S.Round} · {phase} phase · {Describe.Name(S, actor)}'s turn{alongside}"
             : $"round {S.Round} · {Sim(S.Outcome)}");
         sb.Append(AsciiRender.Board(S, marked, _colour, panel.ToArray()));
 
@@ -263,6 +262,7 @@ public sealed class Game
         Outcome.PartyWon => "victory!",
         Outcome.PartyLost => "defeat",
         Outcome.Draw => "draw",
+        Outcome.PartyFled => "the party fled",
         _ => "",
     };
 
@@ -288,10 +288,9 @@ public sealed class Game
           m X Y                  walk to a tile (x across, y down)
           N                      use action N from the list (you'll be asked for a target)
           N T                    use action N on target T
-          e                      end this unit's turn
+          e                      end this unit's turn (the other carries on, if its turn is still going)
           i a / i hero           inspect a unit: stats, moves and its danger zone
           d                      show or hide the enemies' danger zone
-          u                      undo your last action this turn
           l                      the last 20 events
           q                      quit (the battle so far is still logged)
         on the board:

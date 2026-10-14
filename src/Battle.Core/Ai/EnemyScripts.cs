@@ -1,16 +1,18 @@
 namespace Battle.Core.Ai;
 
 /// <summary>
-/// The enemies' hand-written scripts: one per goblin type, plus the Snuffler's fixed rules. They're
-/// the baseline trained enemies have to beat, and how early content ships.
-///   Cutter       closes in and stabs, ganging up where it can; headbutts the hero to cost him his
-///                next bonus action; once wounded, swaps a mate into its place (After you).
+/// The enemies' hand-written scripts, one per goblin type. They're the baseline trained enemies
+/// have to beat, and how early content ships.
+///   Cutter       closes in and stabs, ganging up where it can, then headbutts (a bonus move) to
+///                cost its target its next bonus action; once wounded, swaps a mate into its place
+///                (After you) instead.
 ///   Taunted      any goblin goes for its taunter, even where the rules would let it hit another.
 ///   Plinker      keeps its distance, high up if it can; throws dirt at whoever is about to hit a
 ///                goblin, otherwise plinks; drops its snap trap where the party would stand to attack.
 ///   Beastmaster  hangs back near its beast, points it at the best target and whips it on; lashes
 ///                when it's safe to.
-///   Snuffler     no mind of its own: see <see cref="Beast"/>.
+///   Snuffler     no script: it follows its handler's orders by the rules (Rules.Beasts.cs), so its
+///                only legal action is the one they give.
 ///   Any goblin   whose nerve has broken runs for the nearest edge.
 /// A little seeded randomness breaks near-ties, so simulated battles vary.
 /// </summary>
@@ -50,9 +52,9 @@ public sealed class EnemyScripts : PlannedController
             Flee(s, me, plan);
             return;
         }
-        if (s.DefOf(me).Has(UnitTags.Beast))
+        if (Rules.ActsByRule(s, me))
         {
-            Beast(s, me, plan);
+            plan.Add(Rules.BeastAction(s, me)); // no choices: the rules say what it does
             return;
         }
         switch (s.DefOf(me).Id)
@@ -73,12 +75,15 @@ public sealed class EnemyScripts : PlannedController
         if (u.Has(UnitFlags.MainUsed))
         {
             AfterYou(s, me, plan);
+            if (plan.Count == 0) Headbutt(s, me, plan);
             return;
         }
 
-        // The best attack it could make this turn, from anywhere it could get to. A taunted goblin
-        // only goes for its taunter, even where the rules would let it hit someone else.
+        // The best attack it could make this turn, from anywhere it could get to, counting a
+        // headbutt to follow where it wouldn't need Scamper (both take the bonus action). A taunted
+        // goblin only goes for its taunter, even where the rules would let it hit someone else.
         var scamper = Tactics.Ready(s, me, MoveKind.Scamper);
+        var headbutt = Tactics.Ready(s, me, MoveKind.Melee, MoveSlot.Bonus);
         Candidates(s, me, scamper);
         var probe = s.Clone();
         int taunter = Taunter(s, me);
@@ -90,6 +95,9 @@ public sealed class EnemyScripts : PlannedController
         {
             bool withScamper = pass == 1;
             foreach (var p in withScamper ? _far : _near)
+            {
+                int follow = withScamper || headbutt == null ? 0 : HeadbuttValue(s, me, probe, p, headbutt);
+                int risk = BlastRisk(s, me, p);
                 foreach (int m in s.Info.Kits[me])
                 {
                     var move = s.Data.Moves[m];
@@ -99,7 +107,7 @@ public sealed class EnemyScripts : PlannedController
                     {
                         if (target.Kind != TargetKind.Unit || !Rules.AreEnemies(s, me, target.Unit)) continue;
                         if (taunter >= 0 && target.Unit != taunter) continue;
-                        int score = AttackScore(s, me, target.Unit, move) - (withScamper ? 10 : 0) + Noise(9);
+                        int score = AttackScore(s, me, target.Unit, move) + follow / 2 - risk - (withScamper ? 10 : 0) + Noise(9);
                         if (score <= bestScore) continue;
                         bestScore = score;
                         best = BattleAction.Use(me, move, target);
@@ -107,18 +115,57 @@ public sealed class EnemyScripts : PlannedController
                         bestScamper = withScamper;
                     }
                 }
+            }
         }
         if (best != null)
         {
             Go(s, me, scamper, bestScamper, bestTile, plan);
+            // Into a readied Parry, lead with the headbutt: the block takes it instead of the stab.
+            int target = best.Value.Target.Unit;
+            if (!bestScamper && headbutt != null && s.Units[target].Has(UnitFlags.ParryReady))
+                plan.Add(BattleAction.Use(me, headbutt, Target.OfUnit(target)));
             plan.Add(best.Value);
             return;
         }
         Approach(s, me, scamper, plan);
     }
 
+    /// <summary>Main-action attacks. A bonus attack (Headbutt) is weighed separately, as a follow-up.</summary>
     private static bool IsAttack(MoveDef move) =>
         move.UsesMain && (move.Kind is MoveKind.Melee or MoveKind.Ranged or MoveKind.Charge) && (move.Damage > 0 || move.Status != StatusId.None);
+
+    /// <summary>The best headbutt it could make standing on a tile (0 if none is worth it).</summary>
+    private int HeadbuttValue(BattleState s, int me, BattleState probe, Pos p, MoveDef headbutt)
+    {
+        int taunter = Taunter(s, me), best = 0;
+        foreach (var (target, _) in _t.TargetsFrom(probe, me, p, headbutt))
+        {
+            if (target.Kind != TargetKind.Unit || !Rules.AreEnemies(s, me, target.Unit)) continue;
+            if (taunter >= 0 && target.Unit != taunter) continue;
+            best = Math.Max(best, AttackScore(s, me, target.Unit, headbutt));
+        }
+        return best;
+    }
+
+    /// <summary>After its main action: headbutt whoever in reach it's most worth dazing, if anyone.</summary>
+    private void Headbutt(BattleState s, int me, List<BattleAction> plan)
+    {
+        var headbutt = Tactics.Ready(s, me, MoveKind.Melee, MoveSlot.Bonus);
+        if (headbutt == null) return;
+        int taunter = Taunter(s, me), bestScore = 0;
+        BattleAction? best = null;
+        Rules.Targets(s, me, headbutt, _options);
+        foreach (var (target, _) in _options)
+        {
+            if (target.Kind != TargetKind.Unit || !Rules.AreEnemies(s, me, target.Unit)) continue;
+            if (taunter >= 0 && target.Unit != taunter) continue;
+            int score = AttackScore(s, me, target.Unit, headbutt) + Noise(5);
+            if (score <= bestScore) continue;
+            bestScore = score;
+            best = BattleAction.Use(me, headbutt, target);
+        }
+        if (best != null) plan.Add(best.Value);
+    }
 
     /// <summary>How good an attack on a target looks: damage, a kill, and what a daze would cost him.</summary>
     private static int AttackScore(BattleState s, int me, int target, MoveDef move)
@@ -146,7 +193,7 @@ public sealed class EnemyScripts : PlannedController
         GoalsNextTo(s, me, s.Units[target].Pos);
         _t.CostToGo(s, me, _goals, _field);
         var (tile, withScamper, _) = BestTile(s, me, (p, scampering) =>
-            -Cost(_field[s.Idx(p)]) * 10 - (scampering ? 15 : 0) + (NextToMate(s, me, p) ? 4 : 0) + Noise(3));
+            -Cost(_field[s.Idx(p)]) * 10 - BlastRisk(s, me, p) - (scampering ? 15 : 0) + (NextToMate(s, me, p) ? 4 : 0) + Noise(3));
         Go(s, me, scamper, withScamper, tile, plan);
     }
 
@@ -210,7 +257,7 @@ public sealed class EnemyScripts : PlannedController
             foreach (var p in withScamper ? _far : _near)
             {
                 var (hitters, lethal, nearest) = PartyReach(s, me, p);
-                int score = -hitters * 50 - lethal * 100 + Math.Min(Cost(nearest), 12) * 4 + s.Heights[s.Idx(p)] * 8
+                int score = -hitters * 50 - lethal * 100 - BlastRisk(s, me, p) + Math.Min(Cost(nearest), 12) * 4 + s.Heights[s.Idx(p)] * 8
                     - (withScamper ? 10 : 0) + (p == u.Pos ? Stay(s, me) : 0) + Noise(5);
                 BattleAction? shot = null;
                 int shotScore = 0;
@@ -296,16 +343,15 @@ public sealed class EnemyScripts : PlannedController
         var scamper = Tactics.Ready(s, me, MoveKind.Scamper);
         bool mainFree = !u.Has(UnitFlags.MainUsed);
 
-        // The bonus action: point the beast at better prey, or else whip it on.
+        // The bonus action: point the beast at better prey, or else whip it on. It points from where
+        // it stands, before moving, so the order is never out of range by the time it's given. The
+        // beast acts straight after it and, without a target, does nothing.
         BattleAction? order = null;
         if (beast >= 0 && point != null)
         {
-            int want = BestPrey(s, beast);
-            if (want >= 0 && want != BeastTarget(s, beast, wild: false))
-            {
-                Rules.Targets(s, me, point, _options);
-                if (_options.Contains((Target.OfUnit(want), Target.None))) order = BattleAction.Use(me, point, Target.OfUnit(want));
-            }
+            Rules.Targets(s, me, point, _options);
+            int want = BestPrey(s, beast, _options);
+            if (want >= 0 && want != s.Units[beast].OrderUnit) order = BattleAction.Use(me, point, Target.OfUnit(want));
         }
         bool beastOut = beast >= 0 && s.Units[beast].OnBoard;
         bool wantWhip = order == null && whip != null && beastOut && s.Units[beast].BuffAmount == 0;
@@ -326,7 +372,7 @@ public sealed class EnemyScripts : PlannedController
             foreach (var p in withScamper ? _far : _near)
             {
                 var (hitters, lethal, nearest) = PartyReach(s, me, p);
-                int score = -hitters * 50 - lethal * 100 + Math.Min(Cost(nearest), 10) * 4 - (withScamper ? 10 : 0)
+                int score = -hitters * 50 - lethal * 100 - BlastRisk(s, me, p) + Math.Min(Cost(nearest), 10) * 4 - (withScamper ? 10 : 0)
                     + (p == u.Pos ? Stay(s, me) : 0) + Noise(5);
                 if (beastOut)
                 {
@@ -352,14 +398,17 @@ public sealed class EnemyScripts : PlannedController
             }
         }
 
+        if (order != null) plan.Add(order.Value);
         Go(s, me, scamper, bestScamper, bestTile, plan);
         if (bestLash != null) plan.Add(bestLash.Value);
-        if (order != null) plan.Add(order.Value);
-        else if (wantWhip && Rules.InReach(s, whip!, bestTile, beastPos)) plan.Add(BattleAction.Use(me, whip!, Target.OfUnit(beast)));
+        if (order == null && wantWhip && Rules.InReach(s, whip!, bestTile, beastPos)) plan.Add(BattleAction.Use(me, whip!, Target.OfUnit(beast)));
     }
 
-    /// <summary>The party member the beast should be after: close to it, the hero by preference, the weak and the held more so.</summary>
-    private int BestPrey(BattleState s, int beast)
+    /// <summary>
+    /// Of the party members it could point at, the one the beast should be after: close to it, the
+    /// hero by preference, the weak and the held more so.
+    /// </summary>
+    private int BestPrey(BattleState s, int beast, List<(Target, Target)> pointable)
     {
         ref var b = ref s.Units[beast];
         bool onBoard = b.OnBoard;
@@ -369,7 +418,7 @@ public sealed class EnemyScripts : PlannedController
         for (int i = 0; i < s.Units.Length; i++)
         {
             ref var t = ref s.Units[i];
-            if (!t.Alive || !t.OnBoard || t.Side != Side.Party) continue;
+            if (!t.Alive || !t.OnBoard || t.Side != Side.Party || !pointable.Contains((Target.OfUnit(i), Target.None))) continue;
             int cost = onBoard ? Tactics.ApproachCost(s, _reach, from, t.Pos) : Tactics.Far;
             if (cost == Tactics.Far) cost = from.Manhattan(t.Pos) * 2;
             int score = -cost * 5 - t.Hp * 3 + (i == s.Info.HeroIndex ? 30 : 0) + (t.Braced > 0 ? -30 : 0)
@@ -377,144 +426,6 @@ public sealed class EnemyScripts : PlannedController
             if (score > bestScore) { bestScore = score; best = i; }
         }
         return best;
-    }
-
-    // ------------------------------------------------------------------
-    // The Snuffler
-    // ------------------------------------------------------------------
-
-    /// <summary>
-    /// The Snuffler has no mind of its own. These rules are all it does:
-    ///   - Told to dig to a tile, it burrows there if it still can.
-    ///   - Told to go for a unit (and, until it's told anything, the nearest of the party), it walks up
-    ///     and bites if it can reach this turn; if not, it burrows next to its target when that's in
-    ///     range; otherwise it walks towards it.
-    ///   - With its handler gone it's wild: the same, but at the nearest unit of either side.
-    ///   - Taunted, it bites the taunter whenever it can.
-    /// (Underground it can only burst out, which <see cref="Plan"/> handles.)
-    /// </summary>
-    private void Beast(BattleState s, int me, List<BattleAction> plan)
-    {
-        ref var u = ref s.Units[me];
-        if (u.Has(UnitFlags.MainUsed)) return;
-        bool wild = Rules.IsWild(s, me);
-        var bite = Tactics.Ready(s, me, MoveKind.Melee, MoveSlot.Main);
-        var burrow = Tactics.Ready(s, me, MoveKind.Burrow);
-
-        if (!wild && u.Order == OrderKind.Tile && burrow != null)
-        {
-            Rules.Targets(s, me, burrow, _options);
-            if (_options.Contains((Target.OfTile(u.OrderTile), Target.None)))
-            {
-                plan.Add(BattleAction.Use(me, burrow, Target.OfTile(u.OrderTile)));
-                return;
-            }
-        }
-
-        int target = BeastTarget(s, me, wild);
-        if (target < 0) return;
-
-        // Bite from here, or walk up and bite.
-        if (bite != null)
-        {
-            var probe = s.Clone();
-            Tactics.Standing(s, me, u.MoveLeft, _near);
-            CopyReachCosts(s, me, u.MoveLeft);
-            Pos bestTile = Pos.None;
-            Target bestTarget = Target.None;
-            int bestCost = int.MaxValue;
-            foreach (var p in _near)
-            {
-                int cost = p == u.Pos ? 0 : _reach[s.Idx(p)];
-                if (cost >= bestCost) continue;
-                var options = _t.TargetsFrom(probe, me, p, bite);
-                var pick = Target.None;
-                foreach (var (t, _) in options)
-                    if (t.Kind == TargetKind.Unit && t.Unit == target) pick = t;
-                // Taunted: the taunter is the only target it may bite, whatever it was told.
-                if (pick.Kind == TargetKind.None && u.Taunted > 0)
-                    foreach (var (t, _) in options)
-                        if (t.Kind == TargetKind.Unit && t.Unit == u.TauntBy) pick = t;
-                if (pick.Kind == TargetKind.None) continue;
-                bestCost = cost;
-                bestTile = p;
-                bestTarget = pick;
-            }
-            if (bestTarget.Kind == TargetKind.Unit)
-            {
-                if (bestTile != u.Pos) plan.Add(BattleAction.MoveTo(me, bestTile));
-                plan.Add(BattleAction.Use(me, bite, bestTarget));
-                return;
-            }
-        }
-
-        // Out of reach: burrow next to it.
-        if (burrow != null)
-        {
-            Rules.Targets(s, me, burrow, _options);
-            var targetPos = s.Units[target].Pos;
-            Target best = Target.None;
-            int bestScore = int.MinValue;
-            foreach (var (t, _) in _options)
-            {
-                if (t.Kind != TargetKind.Tile || t.Tile.Manhattan(targetPos) > burrow.Radius) continue;
-                int score = BlastScore(s, me, t.Tile, burrow.Radius, wild);
-                if (score > bestScore) { bestScore = score; best = t; }
-            }
-            if (best.Kind == TargetKind.Tile)
-            {
-                plan.Add(BattleAction.Use(me, burrow, best));
-                return;
-            }
-        }
-
-        // Otherwise walk towards it.
-        GoalsNextTo(s, me, s.Units[target].Pos);
-        _t.CostToGo(s, me, _goals, _field);
-        Tactics.Standing(s, me, u.MoveLeft, _near);
-        Pos walkTo = u.Pos;
-        int bestField = _field[s.Idx(u.Pos)];
-        foreach (var p in _near)
-            if (_field[s.Idx(p)] < bestField) { bestField = _field[s.Idx(p)]; walkTo = p; }
-        if (walkTo != u.Pos) plan.Add(BattleAction.MoveTo(me, walkTo));
-    }
-
-    /// <summary>
-    /// What the beast is after: the unit it was told to go for, or else the nearest by walking: of
-    /// the party, or of anyone once it's wild.
-    /// </summary>
-    private int BeastTarget(BattleState s, int beast, bool wild)
-    {
-        ref var b = ref s.Units[beast];
-        if (!wild && b.Order == OrderKind.Unit && b.OrderUnit >= 0 && s.Units[b.OrderUnit].Alive && s.Units[b.OrderUnit].OnBoard)
-            return b.OrderUnit;
-        if (!b.OnBoard) return -1;
-        Tactics.ReachFrom(s, beast, _reach);
-        int best = -1, bestCost = int.MaxValue;
-        for (int i = 0; i < s.Units.Length; i++)
-        {
-            ref var t = ref s.Units[i];
-            if (i == beast || !t.Alive || !t.OnBoard) continue;
-            if (wild ? !Rules.AreEnemies(s, beast, i) : t.Side != Side.Party) continue;
-            int cost = Tactics.ApproachCost(s, _reach, b.Pos, t.Pos);
-            if (cost == Tactics.Far) cost = 1_000_000 + b.Pos.Manhattan(t.Pos);
-            if (cost < bestCost) { bestCost = cost; best = i; }
-        }
-        return best;
-    }
-
-    /// <summary>Who a burst at this tile would catch: the more of its prey the better, and its own side only if it's wild.</summary>
-    private static int BlastScore(BattleState s, int me, Pos at, int radius, bool wild)
-    {
-        int score = 0;
-        for (int i = 0; i < s.Units.Length; i++)
-        {
-            ref var t = ref s.Units[i];
-            if (i == me || !t.Alive || !t.OnBoard || t.Pos.Manhattan(at) > radius) continue;
-            if (t.Side == Side.Party || wild) score += 10;
-            else score -= 10;
-        }
-        return score;
     }
 
     // ------------------------------------------------------------------
@@ -559,6 +470,25 @@ public sealed class EnemyScripts : PlannedController
     {
         ref var u = ref s.Units[me];
         return u.Taunted > 0 && u.TauntBy >= 0 && s.Units[u.TauntBy].Alive && s.Units[u.TauntBy].OnBoard ? u.TauntBy : -1;
+    }
+
+    /// <summary>
+    /// What standing on a tile risks from a burrowed beast bursting out nearby: the blast hits
+    /// goblins too, and the beast usually comes up before this goblin's next turn.
+    /// </summary>
+    private static int BlastRisk(BattleState s, int me, Pos p)
+    {
+        int risk = 0;
+        for (int i = 0; i < s.Units.Length; i++)
+        {
+            ref var b = ref s.Units[i];
+            if (i == me || !b.Alive || !b.Has(UnitFlags.Burrowed)) continue;
+            var burrow = Rules.KitMove(s, i, MoveKind.Burrow);
+            if (burrow == null || b.BurrowTo.Manhattan(p) > burrow.Radius) continue;
+            int damage = Math.Max(0, burrow.Damage + b.BuffAmount - s.Units[me].Defence);
+            risk += damage * 30 + (damage >= s.Units[me].Hp ? 150 : 0);
+        }
+        return risk;
     }
 
     /// <summary>A preference for staying put, much stronger once it has already walked this turn, so it doesn't dither.</summary>
@@ -618,12 +548,6 @@ public sealed class EnemyScripts : PlannedController
             int tile = s.Idx(p);
             if (s.Trap[tile] == TrapKind.None && (s.Occupant[tile] == me || Rules.CanEndOn(s, me, tile))) _goals[tile] = true;
         }
-    }
-
-    private void CopyReachCosts(BattleState s, int me, int budget)
-    {
-        Rules.ComputeReach(s, me, budget);
-        for (int tile = 0; tile < s.TileCount; tile++) _reach[tile] = Rules.ReachCost(s.PosOf(tile));
     }
 
     /// <summary>

@@ -67,6 +67,14 @@ public static class Invariants
                 if (u.OnBoard) return $"{name} is burrowed but on the board";
                 if (u.BurrowTo.IsNone || s.Rumble[s.Idx(u.BurrowTo)] != i) return $"{name} is burrowed without a rumbling tile";
             }
+            if (u.Alive && u.OrderUnit >= 0 && !s.Units[u.OrderUnit].Alive) return $"{name} is after {s.Label(u.OrderUnit)}, who has left the fight";
+        }
+
+        int actor = Rules.CurrentActor(s);
+        if (actor >= 0)
+        {
+            if (s.Units[actor].Has(UnitFlags.TurnDone)) return $"{s.Label(actor)} is acting after ending its turn";
+            if (s.Phase == Phase.Party && !Rules.PartyTurnOpen(s, actor)) return $"{s.Label(actor)} has the controls without a turn going";
         }
 
         for (int tile = 0; tile < s.TileCount; tile++)

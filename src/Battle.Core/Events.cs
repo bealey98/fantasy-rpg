@@ -3,7 +3,8 @@ namespace Battle.Core;
 /// <summary>The three parts of a round: the party acts, creatures and gusts move, then the enemies act.</summary>
 public enum Phase : byte { Party, Creatures, Enemy }
 
-public enum Outcome : byte { Ongoing, PartyWon, PartyLost, Draw }
+/// <summary>How a battle ended. The party flees by choice (ActionKind.Flee).</summary>
+public enum Outcome : byte { Ongoing, PartyWon, PartyLost, Draw, PartyFled }
 
 /// <summary>
 /// How well an action command was played. It's an input to the core: the game's minigame
@@ -58,8 +59,11 @@ public enum EventType : byte
     Buff,
     Mount,
     Dismount,
+    /// <summary>A ridden Loper was knocked over and threw its rider off.</summary>
+    Thrown,
     Scamper,
-    SwapOrder,
+    /// <summary>The party hands over from one of the pair to the other mid-phase.</summary>
+    SwapPartner,
     CreatureMove,
     FleeStart,
     BattleEnd,

@@ -20,8 +20,8 @@ public interface ITimingSource
 
 /// <summary>
 /// A simulated player's timing: grades drawn from a skill level's chances in rules.json. Each roll
-/// depends only on the seed and how far the battle has got, so undoing an action in terminal play
-/// and trying again gets the same grade rather than a fresh roll.
+/// depends only on the seed and how far the battle has got (its event count), not on how many
+/// grades were asked for before, so a look-ahead or a replay can't shift the rolls.
 /// </summary>
 public sealed class TimingModel : ITimingSource
 {
@@ -75,8 +75,10 @@ public sealed class RandomController : IController
         int firstNonWalk = 0;
         while (firstNonWalk < legal.Count - 1 && legal[firstNonWalk].Kind == ActionKind.Move) firstNonWalk++;
         int nonWalk = legal.Count - 1 - firstNonWalk;
-        if (nonWalk > 0 && _rng.Chance(50)) return legal[firstNonWalk + _rng.Next(nonWalk)];
-        return legal[_rng.Next(legal.Count - 1)];
+        var pick = nonWalk > 0 && _rng.Chance(50) ? legal[firstNonWalk + _rng.Next(nonWalk)] : legal[_rng.Next(legal.Count - 1)];
+        // Fleeing ends the battle, so it's taken only now and then, or fuzzing would rarely get far.
+        if (pick.Kind == ActionKind.Flee && !_rng.Chance(5)) return legal[^1];
+        return pick;
     }
 }
 

@@ -15,15 +15,20 @@ namespace Battle.Tests;
 /// </summary>
 public class GoldenTests
 {
-    /// <summary>The battles kept as goldens: encounter and seed, played scripted against scripted.</summary>
-    private static readonly (string Encounter, ulong Seed)[] Specs =
+    /// <summary>
+    /// The battles kept as goldens: encounter, seed and the party's controller, against the goblins'
+    /// scripts. The random party is there to pin what the party bot never does: handing over
+    /// mid-turn, mounting, getting thrown and fleeing.
+    /// </summary>
+    private static readonly (string Encounter, ulong Seed, string Party)[] Specs =
     [
-        ("river-crossing", 1),
-        ("first-goblins", 1),
-        ("first-goblins", 2),
-        ("goblin-camp", 1),
-        ("goblin-camp", 2),
-        ("goblin-camp-tier2", 1),
+        ("river-crossing", 1, "scripted"),
+        ("first-goblins", 1, "scripted"),
+        ("first-goblins", 2, "scripted"),
+        ("goblin-camp", 1, "scripted"),
+        ("goblin-camp", 2, "scripted"),
+        ("goblin-camp-tier2", 1, "scripted"),
+        ("goblin-camp", 23, "random"),
     ];
 
     private static string Dir => Path.Combine(TestContent.RepoRoot, "tests", "golden");
@@ -62,15 +67,17 @@ public class GoldenTests
     {
         Directory.CreateDirectory(Dir);
         foreach (string old in Directory.GetFiles(Dir)) File.Delete(old);
-        foreach (var (encounter, seed) in Specs)
+        foreach (var (encounter, seed, party) in Specs)
         {
             var state = EncounterLoader.CreateBattle(TestContent.Dir, TestContent.Data, encounter, seed, battleId: 1);
             var log = new BattleLog(state);
-            var runner = new BattleRunner(state, Scripts.For(Side.Party, seed), Scripts.For(Side.Enemy, seed),
+            IController partyController = party == "random" ? new RandomController(seed) : Scripts.For(Side.Party, seed);
+            var runner = new BattleRunner(state, partyController, Scripts.For(Side.Enemy, seed),
                 new TimingModel(TestContent.Data, "average", seed));
             log.Attach(runner);
             runner.Run();
-            string basePath = log.Save(Dir, $"{encounter}-{seed}", "scripted", "scripted", runner.Inputs, "average");
+            string name = party == "scripted" ? $"{encounter}-{seed}" : $"{encounter}-{party}-{seed}";
+            string basePath = log.Save(Dir, name, party, "scripted", runner.Inputs, "average");
             File.Delete(basePath + ".snapshots.jsonl"); // goldens only need inputs and events
             Console.WriteLine($"  golden regenerated: {Path.GetFileName(basePath)}");
         }

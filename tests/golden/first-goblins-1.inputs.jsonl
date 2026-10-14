@@ -1,4 +1,4 @@
-{"format":1,"rules":"0.2.0","content":"sha256:a07b31d1caac","encounter":"first-goblins","arena":"goblin-glade","seed":1,"battle_id":1,"controllers":{"party":"scripted","enemies":"scripted"},"timing":"average"}
+{"format":1,"rules":"0.3.0","content":"sha256:b1848b3bde13","encounter":"first-goblins","arena":"goblin-glade","seed":1,"battle_id":1,"controllers":{"party":"scripted","enemies":"scripted"},"timing":"average"}
 {"round":1,"actor":"hero","kind":"move","to":[5,4]}
 {"round":1,"actor":"hero","kind":"main","move":"bull_rush","target":"b","timing":"good"}
 {"round":1,"actor":"hero","kind":"bonus","move":"bind","target":"b"}
@@ -8,6 +8,7 @@
 {"round":1,"actor":"loper","kind":"end"}
 {"round":1,"actor":"a","kind":"move","to":[6,3]}
 {"round":1,"actor":"a","kind":"main","move":"shiv","target":"hero","timing":"fumble"}
+{"round":1,"actor":"a","kind":"bonus","move":"headbutt","target":"hero","timing":"perfect"}
 {"round":1,"actor":"a","kind":"end"}
 {"round":1,"actor":"b","kind":"end"}
 {"round":1,"actor":"c","kind":"move","to":[8,2]}
@@ -16,12 +17,10 @@
 {"round":1,"actor":"c","kind":"end"}
 {"round":2,"actor":"hero","kind":"move","to":[4,1]}
 {"round":2,"actor":"hero","kind":"main","move":"strike","target":"b","timing":"perfect"}
-{"round":2,"actor":"hero","kind":"bonus","move":"bind","target":"a"}
 {"round":2,"actor":"hero","kind":"end"}
 {"round":2,"actor":"loper","kind":"move","to":[7,2]}
-{"round":2,"actor":"loper","kind":"main","move":"gore","target":"c","timing":"perfect"}
+{"round":2,"actor":"loper","kind":"main","move":"gore","target":"c","timing":"good"}
+{"round":2,"actor":"loper","kind":"bonus","move":"brace","target":"self"}
 {"round":2,"actor":"loper","kind":"end"}
+{"round":2,"actor":"a","kind":"move","to":[9,3]}
 {"round":2,"actor":"a","kind":"end"}
-{"round":3,"actor":"hero","kind":"move","to":[5,3]}
-{"round":3,"actor":"hero","kind":"main","move":"strike","target":"a","timing":"good"}
-{"round":3,"actor":"hero","kind":"bonus","move":"shove","target":"a"}

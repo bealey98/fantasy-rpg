@@ -49,10 +49,13 @@ public enum UnitFlags : uint
 
     /// <summary>Knocked out: a companion at 0 HP sits out the rest of the battle.</summary>
     KnockedOut = 1 << 15,
-}
 
-/// <summary>What a beast has been told to do by its handler.</summary>
-public enum OrderKind : byte { None, Unit, Tile }
+    /// <summary>
+    /// Has ended its turn this phase. The hero's and the Loper's turns run side by side through the
+    /// party phase, so this is how the rules know which of them is still going.
+    /// </summary>
+    TurnDone = 1 << 16,
+}
 
 /// <summary>
 /// One combatant's state during a battle. It's a struct (a plain bundle of values), so the
@@ -113,8 +116,14 @@ public struct Unit
     /// <summary>For a beast: the index of its handler, else -1.</summary>
     public int Handler;
 
-    public OrderKind Order;
+    /// <summary>
+    /// For a beast: the unit it's after, from its handler's last Point at a unit (or, once it's
+    /// wild, the nearest unit at the start of its turn). -1 for none: it was never given one, or
+    /// that unit has left the fight.
+    /// </summary>
     public int OrderUnit;
+
+    /// <summary>For a beast: a tile its handler pointed at this turn, to burrow to. Pos.None for none; it lasts one turn.</summary>
     public Pos OrderTile;
 
     public readonly bool Has(UnitFlags flag) => (Flags & flag) != 0;

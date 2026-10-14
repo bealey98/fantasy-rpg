@@ -12,7 +12,7 @@ namespace Battle.Content;
 ///     "enemies": { "a": "cutter", "b": "plinker" },
 ///     "handlers": { "s": "d" },
 ///     "party": { "weapon_main": ["strike", "bull_rush"], "weapon_bonus": "shove",
-///                "elderwood_tier": 1, "loper": true, "mounted": false, "loper_first": false },
+///                "elderwood_tier": 1, "loper": true, "mounted": false },
 ///     "first_phase": "party"
 ///   }
 /// </summary>
@@ -22,7 +22,7 @@ public static class EncounterLoader
         { "id", "arena", "enemies", "handlers", "party", "first_phase", "notes" };
 
     private static readonly HashSet<string> PartyKeys = new(StringComparer.Ordinal)
-        { "weapon_main", "weapon_bonus", "elderwood_tier", "loper", "mounted", "loper_first" };
+        { "weapon_main", "weapon_bonus", "elderwood_tier", "loper", "mounted" };
 
     public static EncounterDef Load(string contentDir, string nameOrPath, GameData data)
     {
@@ -72,7 +72,6 @@ public static class EncounterLoader
                 ElderwoodTier = partyEl.TryGetProperty("elderwood_tier", out var et) ? et.GetInt32() : party.ElderwoodTier,
                 Loper = !partyEl.TryGetProperty("loper", out var lo) || lo.GetBoolean(),
                 Mounted = partyEl.TryGetProperty("mounted", out var mo) && mo.GetBoolean(),
-                LoperFirst = partyEl.TryGetProperty("loper_first", out var lf) && lf.GetBoolean(),
             };
             if (party.WeaponMain.Count > 2) throw new ContentException($"{file}: the hero has two main weapon slots");
             foreach (string move in Kits.HeroLoadout(party))

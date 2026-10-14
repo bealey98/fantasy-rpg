@@ -1,4 +1,4 @@
-{"format":1,"rules":"0.2.0","content":"sha256:a07b31d1caac","encounter":"river-crossing","arena":"river-crossing","seed":1,"battle_id":1,"controllers":{"party":"scripted","enemies":"scripted"},"timing":"average"}
+{"format":1,"rules":"0.3.0","content":"sha256:b1848b3bde13","encounter":"river-crossing","arena":"river-crossing","seed":1,"battle_id":1,"controllers":{"party":"scripted","enemies":"scripted"},"timing":"average"}
 {"round":1,"actor":"hero","kind":"move","to":[5,3]}
 {"round":1,"actor":"hero","kind":"main","move":"bull_rush","target":"b","timing":"good"}
 {"round":1,"actor":"hero","kind":"end"}

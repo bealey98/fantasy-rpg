@@ -40,8 +40,9 @@ if (length(summaries) > 0) {
   table1 <- do.call(rbind, lapply(by_encounter, function(b) data.frame(
     encounter = b$encounter[1], skill = b$skill[1], battles = nrow(b),
     won = pct(mean(b$outcome == "won")), lost = pct(mean(b$outcome == "lost")), drawn = pct(mean(b$outcome == "draw")),
+    party_fled = pct(mean(b$outcome == "fled")),
     rounds = round(mean(b$rounds), 1), hero_hp = round(mean(b$hero_hp), 1), loper_hp = round(mean(b$loper_hp), 1),
-    fled = round(mean(b$enemies_fled), 2))))
+    enemies_fled = round(mean(b$enemies_fled), 2))))
   rownames(table1) <- NULL
   print(table1, row.names = FALSE)
 }

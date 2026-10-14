@@ -94,6 +94,7 @@ class Board:
         self.round = s["round"]
         self.phase = s["phase"]
         self.actor = s.get("actor", "")
+        self.open_turns = list(s.get("open_turns", []))
         self.heights = [[int(c) for c in row] for row in s["heights"]]
         self.terrain = [list(row) for row in s["terrain"]]
         self.features = [list(row) for row in s["features"]]
@@ -124,8 +125,19 @@ class Board:
             self.round = int(e["amount"])
         elif kind == "phase_start":
             self.phase = e["detail"]
+            self.open_turns = []
         elif kind == "turn_start":
-            self.actor = e["actor"]
+            # The hero's and the Loper's turns start together; the first to start has the controls.
+            if not self.open_turns:
+                self.actor = e["actor"]
+            self.open_turns.append(e["actor"])
+        elif kind == "turn_end":
+            if e["actor"] in self.open_turns:
+                self.open_turns.remove(e["actor"])
+            if self.open_turns:
+                self.actor = self.open_turns[0]
+        elif kind == "swap_partner":
+            self.actor = e["target"]
         elif kind in ("move", "charge", "push", "pull", "drag", "swap") and target and to:
             self.place(target, to)
         elif kind in ("damage", "heal") and target:
@@ -182,6 +194,11 @@ class Board:
             if mount:
                 mount.pop("carrying", None)
             actor["x"], actor["y"] = to
+        elif kind == "thrown" and target and to:
+            mount = self.units.get(target.pop("riding", ""))
+            if mount:
+                mount.pop("carrying", None)
+            target["x"], target["y"] = to
         elif kind == "tether_set":
             self.tethers.append({"label": e["detail"]})
         elif kind == "tether_end":
@@ -251,14 +268,16 @@ def describe(board: Board, e: dict) -> str | None:
         "burrow": f"{t} burrows; the ground rumbles at {to}",
         "surface": f"{t} bursts out at {to}",
         "crater": f"a crater opens at {to}",
-        "order": f"{a} points the beast at {t if e['target'] else to}",
+        "order": f"{a}, wild, goes for {t}" if e["detail"] == "wild" else f"{a} points the beast at {t if e['target'] else to}",
         "buff": f"{a} whips {t} (+{amount})",
         "mount": f"{a} mounts {t}",
         "dismount": f"{a} dismounts to {to}",
+        "thrown": f"{t} is thrown off to {to}",
         "scamper": f"{a} scampers",
-        "swap_order": "the party swaps its order",
+        "swap_partner": f"{a} hands over to {t}",
         "creature_move": f"the {e['detail']} move {frm} → {to}",
-        "battle_end": {"party_won": "Victory!", "party_lost": "Defeat.", "draw": "Draw."}.get(e["detail"], e["detail"]),
+        "battle_end": {"party_won": "Victory!", "party_lost": "Defeat.", "draw": "Draw.",
+                       "party_fled": "The party flees."}.get(e["detail"], e["detail"]),
     }
     return lines.get(k)
 
@@ -344,12 +363,15 @@ class Viewer:
         return board
 
     def turn_bounds(self) -> tuple[int, int]:
-        """The first and last event index of the turn containing the current event."""
+        """
+        The first and last event index of the turn containing the current event. The hero and the
+        Loper hand over mid-turn, so a handover ends one stretch and starts the next.
+        """
         start = self.index
-        while start > 0 and self.events[start]["event"] not in ("turn_start", "round_start"):
+        while start > 0 and self.events[start]["event"] not in ("turn_start", "round_start", "swap_partner"):
             start -= 1
         end = self.index
-        while end < len(self.events) - 1 and self.events[end]["event"] != "turn_end":
+        while end < len(self.events) - 1 and self.events[end]["event"] not in ("turn_end", "swap_partner"):
             end += 1
         return start, end
 

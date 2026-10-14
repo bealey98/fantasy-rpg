@@ -22,8 +22,6 @@ public sealed class RulesConfig
     /// <summary>Half-points of movement a knocked-over unit loses getting up at the start of its next turn.</summary>
     public int KnockedOverDrain { get; set; } = 6;
 
-    /// <summary>Half-points of movement a slowed unit loses each turn.</summary>
-    public int SlowAmount { get; set; } = 4;
 
     /// <summary>Extra damage from the attacker's action command, by grade: fumble, good, perfect.</summary>
     public int[] AttackBonus { get; set; } = [0, 1, 2];
@@ -51,6 +49,9 @@ public sealed class RulesConfig
 
     /// <summary>Goblin morale: the last goblin standing against more than one of the party tries to flee.</summary>
     public bool FleeEnabled { get; set; } = true;
+
+    /// <summary>The party can flee from the arena's edge when no enemy is within this many steps of any of them.</summary>
+    public int PartyFleeRange { get; set; } = 3;
 
     /// <summary>The bonus or reduction for a timing grade from one of the tables above.</summary>
     public static int ByGrade(int[] table, Timing grade) => grade switch

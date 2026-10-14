@@ -5,7 +5,7 @@ public static partial class Rules
     // ------------------------------------------------------------------
     // Status effects
     //   rooted        can't move (or be pushed) while it lasts
-    //   slowed        less movement each turn
+    //   slowed        half movement each turn
     //   blinded       its attacks miss if their action command is fumbled, and a good command only
     //                 lands the hit, without its usual bonus. Spells aren't affected.
     //   dazed         loses its next bonus action
@@ -68,6 +68,7 @@ public static partial class Rules
         }
         bool timed = status is not (StatusId.Dazed or StatusId.KnockedOver);
         s.Emit(EventType.Status, source, target, t.Pos, amount: timed ? Math.Max(1, rounds) : 0, move: move, detail: StatusName(status));
+        if (status == StatusId.KnockedOver && s.Units[target].Rider >= 0) ThrowRider(s, target, source);
     }
 
     /// <summary>The side whose phase it is, or null between them (the creatures step).</summary>

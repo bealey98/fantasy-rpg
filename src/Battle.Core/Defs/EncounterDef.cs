@@ -38,7 +38,4 @@ public sealed class PartySetup
 
     /// <summary>Start the battle with the hero riding the Loper.</summary>
     public bool Mounted { get; init; }
-
-    /// <summary>The Loper acts before the hero.</summary>
-    public bool LoperFirst { get; init; }
 }

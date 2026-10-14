@@ -9,14 +9,15 @@ public static partial class Rules
     //     still standing, tries to flee: it can only move, and it escapes if it ends a turn on the
     //     arena's edge. (Still open: whether a living Snuffler should count; here it doesn't.)
     //   Cutter: Shiv (Gang up: +1 when another goblin is also next to the target), Headbutt (a
-    //     special: dazes the target and the Cutter), After you (swap with a neighbouring goblin).
+    //     bonus move: dazes the target and the Cutter), After you (swap with a neighbouring goblin).
     //   Plinker: Plink, Pocket dirt (blinds), Snap trap (a jaw trap on a tile; catches anyone).
-    //   Beastmaster: Lash (reach 2), Point (tells its beast what to attack), Whip (+1 on the beast's
-    //     next attack).
+    //   Beastmaster: Lash (reach 2), Point (tells its beast what to attack, or where to dig), Whip
+    //     (+1 on the beast's next attack). The beast acts straight after it, as one joint turn.
     //   Snuffler: Gnash, and Burrow: it goes underground and the destination rumbles; on its next
     //     turn it bursts out, hitting and knocking over everything in a small area and leaving a
-    //     crater. A root on that tile catches it. Without its handler it goes wild and attacks the
-    //     nearest unit, goblins included.
+    //     crater. A root on that tile catches it. It follows its orders by fixed rules
+    //     (Rules.Beasts.cs). Without its handler it goes wild and attacks the nearest unit, goblins
+    //     included.
     // ------------------------------------------------------------------
 
     /// <summary>A beast whose handler is gone (dead or fled) is wild: it fights everyone, and everyone fights it.</summary>
@@ -143,9 +144,10 @@ public static partial class Rules
     }
 
     /// <summary>
-    /// Point: tell the beast what to attack. A unit order means "go and bite it"; a tile order means
-    /// "burrow there". Units anywhere within the move's range count; tiles must be ones the beast
-    /// could burrow to.
+    /// Point: tell the beast what to do. Pointing at a unit makes it the beast's target, which it
+    /// goes after until it's pointed at another or the target leaves the fight. Pointing at a tile
+    /// tells it to burrow there this turn; its target stays the same. Units anywhere within the
+    /// move's range count; tiles must be ones the beast could burrow to.
     /// </summary>
     private static void PointTargets(BattleState s, int actor, MoveDef move, List<(Target, Target)> output)
     {
@@ -171,15 +173,11 @@ public static partial class Rules
         ref var b = ref s.Units[beast];
         if (a.Target.Kind == TargetKind.Unit)
         {
-            b.Order = OrderKind.Unit;
             b.OrderUnit = a.Target.Unit;
-            b.OrderTile = Pos.None;
             s.Emit(EventType.Order, a.Actor, a.Target.Unit, move: move.Index, detail: s.Label(beast));
         }
         else
         {
-            b.Order = OrderKind.Tile;
-            b.OrderUnit = -1;
             b.OrderTile = a.Target.Tile;
             s.Emit(EventType.Order, a.Actor, -1, to: a.Target.Tile, move: move.Index, detail: s.Label(beast));
         }
@@ -197,9 +195,9 @@ public static partial class Rules
     {
         ref var b = ref s.Units[a.Target.Unit];
         b.BuffAmount = move.Amount;
-        // The buff waits for the beast's next attack, through to the end of the next enemy phase:
-        // beasts are stronger than their handlers, so they act first, and a whip cracked after the
-        // beast's turn has to last until its turn next round.
+        // The buff waits for the beast's next attack, through to the end of the next enemy phase.
+        // The beast acts straight after its handler, so it's usually used at once; if the beast
+        // can't attack this turn, it keeps until its turn next round.
         b.Buffed = Rounds(1) + 1;
         s.Emit(EventType.Buff, a.Actor, a.Target.Unit, b.Pos, amount: move.Amount, move: move.Index);
     }
@@ -246,7 +244,7 @@ public static partial class Rules
         u.BurrowTo = a.Target.Tile;
         u.MoveLeft = 0;
         s.Rumble[s.Idx(a.Target.Tile)] = a.Actor;
-        if (u.Order == OrderKind.Tile) u.Order = OrderKind.None; // a tile order is used up by digging
+        u.OrderTile = Pos.None; // a dig order is used up by digging
         s.Emit(EventType.Burrow, a.Actor, a.Actor, from, a.Target.Tile, move: move.Index);
     }
 
@@ -371,25 +369,23 @@ public static partial class Rules
             u.MoveLeft = 0;
             u.Set(UnitFlags.BonusUsed);
         }
+        if (IsWild(s, unit)) PickWildTarget(s, unit);
         if (u.Side == Side.Enemy) CheckNerve(s, unit);
     }
 
-    private static void OnTurnEnd(BattleState s, int unit) => TryEscape(s, unit);
+    private static void OnTurnEnd(BattleState s, int unit)
+    {
+        s.Units[unit].OrderTile = Pos.None; // a dig order lasts one turn
+        TryEscape(s, unit);
+    }
 
     /// <summary>
-    /// When a unit leaves the fight: beasts ordered at it forget the order. A handler leaving makes its
-    /// beast wild (see IsWild).
+    /// When a unit leaves the fight: a beast that was after it has no target until it's given another.
+    /// A handler leaving makes its beast wild (see IsWild).
     /// </summary>
     private static void OnUnitGoneGoblins(BattleState s, int unit)
     {
         for (int i = 0; i < s.Units.Length; i++)
-        {
-            ref var b = ref s.Units[i];
-            if (b.Order == OrderKind.Unit && b.OrderUnit == unit)
-            {
-                b.Order = OrderKind.None;
-                b.OrderUnit = -1;
-            }
-        }
+            if (s.Units[i].OrderUnit == unit) s.Units[i].OrderUnit = -1;
     }
 }

@@ -22,6 +22,11 @@ public static class Snapshots
             w.WriteNumber("seq", s.Seq);
             w.WriteString("phase", Rules.PhaseName(s.Phase));
             w.WriteString("actor", s.Label(Rules.CurrentActor(s)));
+            // The party's turns run side by side: whose are still going (empty outside the party phase).
+            w.WriteStartArray("open_turns");
+            for (int i = 0; i < s.Units.Length; i++)
+                if (Rules.PartyTurnOpen(s, i)) w.WriteStringValue(s.Label(i));
+            w.WriteEndArray();
             w.WriteString("arena", s.Info.ArenaName);
             w.WriteString("encounter", s.Info.EncounterId);
             w.WriteString("time", s.Info.Time);

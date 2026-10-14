@@ -76,7 +76,9 @@ public class GoblinTests
         Assert.Equal(9, s.Units[0].Hp, "1 damage");
         Assert.True(s.Units[0].Has(UnitFlags.Dazed), "the hero is dazed");
         Assert.True(s.Units[a].Has(UnitFlags.Dazed), "and so is the Cutter");
-        Assert.True(s.Units[a].Has(UnitFlags.MainUsed) && s.Units[a].Has(UnitFlags.BonusUsed), "a special takes both actions");
+        Assert.True(s.Units[a].Has(UnitFlags.BonusUsed) && !s.Units[a].Has(UnitFlags.MainUsed), "a bonus move: the main action is still free");
+        Rules.Apply(s, Use(s, a, "shiv", Target.OfUnit(0)).WithTiming(Timing.Fumble));
+        Assert.Equal(7, s.Units[0].Hp, "so it can stab in the same turn");
 
         End(s); // round 2: the hero
         Assert.True(s.Units[0].Has(UnitFlags.BonusUsed), "the hero has lost his bonus action");
@@ -193,21 +195,119 @@ public class GoblinTests
     // ---- The Beastmaster and the Snuffler ----
 
     [Test]
-    public void TheWhipLastsUntilTheBeastsNextTurn()
+    public void TheBeastActsRightAfterItsHandlerWhereTheStrongerWould()
+    {
+        var s = Start(TestBattles.Field(8, 2, "H.......", "..a.d.s."),
+            enemies: new() { ['a'] = "cutter", ['d'] = "beastmaster", ['s'] = "snuffler" }, handlers: Handled);
+        End(s); // the hero
+        var order = new List<string>();
+        while (s.Phase == Phase.Enemy && s.Round == 1)
+        {
+            order.Add(s.Label(Rules.CurrentActor(s)));
+            Rules.Apply(s, Legal(s)[^1]); // end each turn (the Snuffler's one choice is to end it: no orders yet)
+        }
+        Assert.Equal("d,s,a", string.Join(",", order), "the handler (3) and its beast (4) act together, before the Cutter (2)");
+    }
+
+    [Test]
+    public void ABeastHasNoChoicesOfItsOwn()
     {
         var s = Start(TestBattles.Field(6, 2, ".H....", ".sd..."), enemies: Camp, handlers: Handled);
         int sn = U(s, "s"), d = U(s, "d");
         End(s); // the hero
-        End(s); // the Snuffler acts before its handler: it's stronger
+        End(s); // the Beastmaster gives no order
+        Assert.Equal(sn, Rules.CurrentActor(s), "the Snuffler's turn");
+        var legal = Legal(s);
+        Assert.Equal(1, legal.Count, "one legal action");
+        Assert.Equal(ActionKind.End, legal[0].Kind, "never told to go for anyone, it does nothing");
+        Assert.Throws<IllegalActionException>(() => Rules.Apply(s, Use(s, sn, "gnash", Target.OfUnit(0))), "even with the hero in reach");
+    }
+
+    [Test]
+    public void TheWhipSpursOnTheBiteRightAway()
+    {
+        var s = Start(TestBattles.Field(6, 2, ".H....", ".sd..."), enemies: Camp, handlers: Handled);
+        int sn = U(s, "s"), d = U(s, "d");
+        End(s); // the hero
+        Assert.Equal(d, Rules.CurrentActor(s), "the handler first");
         Rules.Apply(s, Use(s, d, "whip", Target.OfUnit(sn)));
-        Assert.Equal(1, s.Units[sn].BuffAmount, "spurred on");
+        Rules.Apply(s, Use(s, d, "lash", Target.OfUnit(0)).WithTiming(Timing.Perfect));
+        End(s);
+        Assert.Equal(sn, Rules.CurrentActor(s), "then its beast");
+        Assert.Equal(ActionKind.End, Legal(s)[0].Kind, "with no target yet, it waits, whipped or not");
         End(s);
         End(s); // round 2: the hero
-        Assert.Equal(sn, Rules.CurrentActor(s), "the Snuffler's next turn");
-        Assert.Equal(1, s.Units[sn].BuffAmount, "still spurred on");
-        Rules.Apply(s, Use(s, sn, "gnash", Target.OfUnit(0)).WithTiming(Timing.Fumble));
-        Assert.Equal(10 - 4, s.Units[0].Hp, "Gnash's 3 plus 1");
+        Assert.Equal(1, s.Units[sn].BuffAmount, "the whip keeps until the beast's next turn");
+        Rules.Apply(s, Use(s, d, "point", Target.OfUnit(0)));
+        End(s);
+        var bite = Legal(s).Single();
+        Assert.Equal(s.Data.Move("gnash").Index, bite.Move, "pointed at the hero next to it, it bites");
+        Rules.Apply(s, bite.WithTiming(Timing.Fumble));
+        Assert.Equal(10 - 4, s.Units[0].Hp, "Gnash's 3 plus the whip's 1");
         Assert.Equal(0, s.Units[sn].BuffAmount, "used up");
+    }
+
+    [Test]
+    public void TheSnufflerGoesForWhatItsHandlerPointsAtAndKeepsAtIt()
+    {
+        var s = Start(TestBattles.Field(8, 4, "........", ".H.s.d..", "........", "L......."), enemies: Camp, handlers: Handled);
+        int sn = U(s, "s"), d = U(s, "d"), loper = s.Info.LoperIndex;
+        End(s); // the hero
+        End(s); // the Loper
+        Rules.Apply(s, Use(s, d, "point", Target.OfUnit(loper)));
+        Assert.Equal(loper, s.Units[sn].OrderUnit, "told to go for the Loper");
+        End(s);
+        var dig = Legal(s).Single();
+        Assert.Equal(s.Data.Move("burrow").Index, dig.Move, "the Loper is out of reach this turn, so it digs");
+        Assert.Equal(1, dig.Target.Tile.Manhattan(s.Units[loper].Pos), "next to the Loper, though the hero is nearer");
+        Rules.Apply(s, dig);
+        End(s);
+        End(s); // round 2: the hero
+        End(s); // the Loper stays put
+        End(s); // the Beastmaster says nothing new
+        var burst = Legal(s).Single();
+        Rules.Apply(s, burst.WithTiming(Timing.Fumble));
+        Assert.True(s.Units[loper].Hp < 8, "the blast catches the Loper");
+        End(s);
+        End(s); // round 3: the hero
+        End(s); // the Loper
+        End(s); // the Beastmaster
+        var next = Legal(s).Single();
+        Assert.Equal(s.Data.Move("gnash").Index, next.Move, "with no new order, it carries on with its target");
+        Assert.Equal(loper, next.Target.Unit, "the Loper");
+    }
+
+    [Test]
+    public void ATargetLeavingTheFightLeavesTheBeastIdle()
+    {
+        var s = Start(TestBattles.Field(6, 3, ".H....", "Ls.d..", "......"), enemies: Camp, handlers: Handled);
+        int sn = U(s, "s"), loper = s.Info.LoperIndex;
+        s.Units[sn].OrderUnit = loper; // as if pointed at the Loper last round
+        var bite = Rules.BeastAction(s, sn);
+        Assert.Equal(s.Data.Move("gnash").Index, bite.Move, "it goes for the Loper next to it");
+        Assert.Equal(loper, bite.Target.Unit, "not the hero, who's next to it too");
+        Rules.DealDamage(s, -1, loper, 100);
+        Assert.Equal(-1, s.Units[sn].OrderUnit, "its target is out of the fight");
+        Assert.Equal(ActionKind.End, Rules.BeastAction(s, sn).Kind, "so it does nothing until it's pointed at someone else");
+    }
+
+    [Test]
+    public void ATileOrderSendsItDiggingAndItKeepsItsTarget()
+    {
+        var s = Start(TestBattles.Field(8, 3, "H.......", "........", "...s..d."), enemies: Camp, handlers: Handled);
+        int sn = U(s, "s"), d = U(s, "d");
+        End(s); // the hero
+        s.Units[sn].OrderUnit = 0; // as if pointed at the hero last round
+        var tile = new Pos(5, 0);
+        Rules.Apply(s, Use(s, d, "point", Target.OfTile(tile)));
+        Assert.Equal(tile, s.Units[sn].OrderTile, "told to dig");
+        End(s);
+        var dig = Legal(s).Single();
+        Assert.Equal(s.Data.Move("burrow").Index, dig.Move, "it digs");
+        Assert.Equal(tile, dig.Target.Tile, "where it was told to");
+        Rules.Apply(s, dig);
+        Assert.Equal(Pos.None, s.Units[sn].OrderTile, "the dig order is used up");
+        Assert.Equal(0, s.Units[sn].OrderUnit, "but it's still after the hero");
     }
 
     [Test]
@@ -274,26 +374,6 @@ public class GoblinTests
         Assert.Equal(a.ToString(), string.Join(",", bites), "the Cutter next to it is fair game now");
     }
 
-    [Test]
-    public void TheSnufflerGoesForWhatItsHandlerPointsAt()
-    {
-        var s = Start(TestBattles.Field(8, 4, "........", ".H.s.d..", "........", "L......."), enemies: Camp, handlers: Handled);
-        int sn = U(s, "s"), d = U(s, "d"), loper = s.Info.LoperIndex;
-        End(s); // the hero
-        End(s); // the Loper
-        End(s); // the Snuffler waits
-        Rules.Apply(s, Use(s, d, "point", Target.OfUnit(loper)));
-        Assert.Equal(OrderKind.Unit, s.Units[sn].Order, "an order");
-        Assert.Equal(loper, s.Units[sn].OrderUnit, "to go for the Loper");
-        End(s);
-        End(s); // round 2: the hero
-        End(s); // the Loper
-
-        var choice = new EnemyScripts(1).Choose(s, sn, Legal(s));
-        Assert.Equal(s.Data.Move("burrow").Index, choice.Move, "the Loper is out of reach this turn, so it digs");
-        Assert.Equal(1, choice.Target.Tile.Manhattan(s.Units[loper].Pos), "next to the Loper, though the hero is nearer");
-    }
-
     // ---- Nerve ----
 
     [Test]
@@ -328,9 +408,10 @@ public class GoblinTests
         int sn = U(s, "s"), d = U(s, "d");
         End(s); // the hero
         End(s); // the Loper
+        Assert.Equal(d, Rules.CurrentActor(s), "the handler's turn");
+        Assert.True(s.Units[d].Has(UnitFlags.Fleeing), "the last goblin runs, though its beast is still fighting");
+        End(s);
         Assert.False(s.Units[sn].Has(UnitFlags.Fleeing), "beasts don't run");
-        End(s); // the Snuffler
-        Assert.True(s.Units[d].Has(UnitFlags.Fleeing), "its handler, the last goblin, does");
     }
 
     [Test]

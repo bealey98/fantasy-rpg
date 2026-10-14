@@ -15,7 +15,7 @@ public static partial class Rules
         public const int MaxTiles = 32 * 32;
         public readonly int[] Dist = new int[MaxTiles];
         public readonly int[] Prev = new int[MaxTiles];
-        public readonly int[] Heap = new int[MaxTiles * 4];
+        public readonly int[] Heap = new int[MaxTiles * 8];
         public int ForUnit = -1;
         public int ForBudget = -1;
         public BattleState? ForState;
@@ -130,6 +130,46 @@ public static partial class Rules
 
     /// <summary>The cost to reach a tile from the last <see cref="ComputeReach"/>, or Unreachable.</summary>
     public static int ReachCost(Pos p) => S.Dist[p.Y * S.ForState!.Width + p.X];
+
+    /// <summary>
+    /// For every tile, the cheapest movement (half-points) for this unit to get from there onto one
+    /// of the goal tiles by its own movement rules, or Unreachable (Dijkstra's algorithm run backwards
+    /// from the goals). Traps stop movement, so paths don't run through them, unless
+    /// <paramref name="trapCost"/> says what stopping on one is worth to a unit willing to.
+    /// Leaves the results of the last <see cref="ComputeReach"/> alone.
+    /// </summary>
+    public static void CostToGo(BattleState s, int unit, bool[] goals, int[] field, int trapCost = -1)
+    {
+        var heap = S.Heap;
+        int size = 0;
+        for (int tile = 0; tile < s.TileCount; tile++)
+        {
+            field[tile] = Unreachable;
+            if (!goals[tile]) continue;
+            field[tile] = 0;
+            Push(heap, ref size, tile);
+        }
+        while (size > 0)
+        {
+            int key = Pop(heap, ref size);
+            int tile = key & 1023, cost = key >> 10;
+            if (cost > field[tile]) continue;
+            bool trap = !goals[tile] && s.Trap[tile] != TrapKind.None;
+            if (trap && trapCost < 0) continue;
+            int extra = trap ? trapCost : 0;
+            var here = s.PosOf(tile);
+            foreach (var d in Dirs.All)
+            {
+                var before = here.Step(d);
+                if (!s.InBounds(before)) continue;
+                int b = s.Idx(before);
+                int step = StepCost(s, unit, b, tile);
+                if (step < 0 || cost + step + extra >= field[b]) continue;
+                field[b] = cost + step + extra;
+                Push(heap, ref size, (field[b] << 10) | b);
+            }
+        }
+    }
 
     /// <summary>Every tile the unit could finish a move on with its remaining movement.</summary>
     public static void ReachableTiles(BattleState s, int unit, List<Pos> output)

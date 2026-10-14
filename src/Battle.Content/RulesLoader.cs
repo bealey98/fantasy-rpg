@@ -19,7 +19,6 @@ public static class RulesLoader
         ["round_cap"] = (r, v, k) => r.RoundCap = Int(v, k),
         ["timing_skill"] = (r, v, k) => r.TimingSkill = TimingSkill(v, k),
         ["knocked_over_drain"] = (r, v, k) => r.KnockedOverDrain = Tiles(v, k),
-        ["slow_amount"] = (r, v, k) => r.SlowAmount = Tiles(v, k),
         ["attack_bonus"] = (r, v, k) => r.AttackBonus = GradeTable(v, k),
         ["guard_reduction"] = (r, v, k) => r.GuardReduction = GradeTable(v, k),
         ["collision_damage"] = (r, v, k) => r.CollisionDamage = Int(v, k),
@@ -29,6 +28,7 @@ public static class RulesLoader
         ["source_range"] = (r, v, k) => r.SourceRange = Int(v, k),
         ["tether_max_length"] = (r, v, k) => r.TetherMaxLength = Int(v, k),
         ["goblins_flee"] = (r, v, k) => r.FleeEnabled = Bool(v, k),
+        ["party_flee_range"] = (r, v, k) => r.PartyFleeRange = Int(v, k),
     };
 
     /// <summary>{"fumble": 0, "good": 1, "perfect": 2} as [0, 1, 2].</summary>

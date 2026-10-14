@@ -120,7 +120,8 @@ public static class InputLog
         ActionKind.Special => "special",
         ActionKind.Mount => "mount",
         ActionKind.Dismount => "dismount",
-        ActionKind.SwapOrder => "swap_order",
+        ActionKind.SwapPartner => "swap_partner",
+        ActionKind.Flee => "flee",
         _ => "end",
     };
 
@@ -132,7 +133,8 @@ public static class InputLog
         "special" => ActionKind.Special,
         "mount" => ActionKind.Mount,
         "dismount" => ActionKind.Dismount,
-        "swap_order" => ActionKind.SwapOrder,
+        "swap_partner" => ActionKind.SwapPartner,
+        "flee" => ActionKind.Flee,
         "end" => ActionKind.End,
         _ => throw new ContentException($"input log line {lineNo}: unknown kind '{name}'"),
     };

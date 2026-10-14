@@ -13,9 +13,8 @@
   // A battle still going after this many rounds is a draw.
   "round_cap": 30,
 
-  // Status effects. Knocked over: movement lost getting up, once. Slowed: movement lost each turn.
+  // Knocked over: movement lost getting up, once. (Slowed halves movement; that's a rule, not a number.)
   "knocked_over_drain": 3,
-  "slow_amount": 2,
 
   // What timing earns (an open design question; these are placeholders).
   // attack_bonus: extra damage from the attacker's action command.
@@ -42,6 +41,10 @@
 
   // Goblin morale: the only goblin left against more than one of the party runs for the edge.
   "goblins_flee": true,
+
+  // The party can flee once everyone on the board stands on the arena's edge and no enemy is
+  // within this many steps of any of them.
+  "party_flee_range": 3,
 
   // Simulated timing for each skill level: chance in 100 of [fumble, good, perfect].
   // Used by the simulator, and by terminal play until the real timing minigames exist.

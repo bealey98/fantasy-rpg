@@ -18,12 +18,16 @@ dotnet run --project src/Battle.Play -- goblin-camp-tier2             # the camp
 dotnet run --project src/Battle.Play -- goblin-camp --timing ask      # you grade each action command and guard yourself
 ```
 
-You play the hero and the Loper; the goblins use their scripts. Type `?` in a battle for the
-commands, `i a` to inspect a goblin (its moves and danger zone), `d` for every enemy's danger zone.
-`river-crossing` is the small test fight from the plan.
+You play the hero and the Loper; the goblins use their scripts. The hero's and the Loper's turns
+run side by side: hand over to the other at any point with the "Swap to" action, as often as you
+like, until one of them ends its turn. With the whole party on the arena's edge and no enemy within
+3 tiles, "Flee the battle" ends it. Type `?` in a battle for the commands, `i a` to inspect a goblin
+(its moves and danger zone), `d` for every enemy's danger zone. `river-crossing` is the small test
+fight from the plan.
 
-Every rule and number in M1 that the design doc doesn't settle is a stand-in, listed in
-`docs/placeholders.md` with the open questions.
+The rules M1 needed beyond the design doc are listed in the doc's M1 audit tab, with which are
+decided. `docs/placeholders.md` lists what's still a stand-in: every number, and the few rules not
+yet decided.
 
 ## Layout
 
@@ -67,8 +71,8 @@ The simulator and terminal play need someone to make the choices. Until trained 
 
 | Script | Plays |
 | --- | --- |
-| `EnemyScripts` | Each goblin type in character (Cutters gang up and headbutt the hero, Plinkers keep their distance and throw dirt, the Beastmaster hangs back and points), the Snuffler by its fixed rules, and any goblin whose nerve breaks runs for the edge. |
-| `PartyBot` | A straightforward simulated player: it tries each attack from each tile on a copy of the battle and takes the best, then spends its bonus action by simple rules. It never Tethers, mounts or swaps the party order, so a real player should do better. |
+| `EnemyScripts` | Each goblin type in character (Cutters gang up and headbutt the hero, Plinkers keep their distance and throw dirt, the Beastmaster hangs back and points), and any goblin whose nerve breaks runs for the edge. The Snuffler has no script: it follows its handler's orders by fixed rules in the core (`Rules.Beasts.cs`), so it only ever has one legal action. |
+| `PartyBot` | A straightforward simulated player: it tries each attack from each tile on a copy of the battle and takes the best, then spends its bonus action by simple rules. It plays the hero's whole turn, then the Loper's. It never Tethers, mounts, hands over mid-turn or flees, so a real player should do better. |
 | `SimpleScript`, `RandomController` | Baselines: hit the weakest thing in reach, or pick at random (for fuzzing). |
 
 Pick them with `--party` and `--enemies`: `scripted` (the default), `simple` or `random`.

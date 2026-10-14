@@ -99,7 +99,7 @@ public class LogTests
         var strike = BattleAction.Use(0, s.Data.Move("strike"), Target.OfUnit(1));
         var first = timing.Grade(s, strike, TimingNeed.Attack);
         for (int i = 0; i < 20; i++)
-            Assert.Equal(first, timing.Grade(s, strike, TimingNeed.Attack), "the same moment of the battle gets the same grade, so undo can't re-roll it");
+            Assert.Equal(first, timing.Grade(s, strike, TimingNeed.Attack), "the same moment of the battle gets the same grade, however often it's asked");
 
         var counts = new int[4];
         for (int seq = 0; seq < 3000; seq++)

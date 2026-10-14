@@ -5,9 +5,12 @@ public static partial class Rules
     // ------------------------------------------------------------------
     // The flow of a battle
     //
-    // A round is: the party phase (the hero and the Loper, in the chosen order), the creatures
-    // step (living features move), then the enemy phase (strongest first). Each unit's turn
-    // starts automatically; it then takes inputs until it chooses End.
+    // A round is: the party phase, the creatures step (living features move), then the enemy
+    // phase. Each unit's turn starts automatically; it then takes inputs until it chooses End.
+    //   - Party phase: the hero's and the Loper's turns both start at once and run side by side.
+    //     The hero has the controls first; the player can hand over to the Loper and back as often
+    //     as they like (SwapPartner) until one of them ends its turn. The phase ends when both have.
+    //   - Enemy phase: strongest first. A beast acts straight after its handler, as one joint turn.
     // ------------------------------------------------------------------
 
     /// <summary>Starts the battle: round 1, the first phase and the first turn.</summary>
@@ -35,42 +38,73 @@ public static partial class Rules
     private static void BeginPhase(BattleState s, Phase phase)
     {
         s.Phase = phase;
-        s.PhaseActed = false;
         s.Emit(EventType.PhaseStart, detail: PhaseName(phase));
-        if (phase == Phase.Creatures)
+        switch (phase)
         {
-            s.OrderCount = 0;
-            s.OrderPos = 0;
-            CreatureStep(s);
-            EndPhase(s);
-            return;
+            case Phase.Creatures:
+                s.OrderCount = 0;
+                s.OrderPos = 0;
+                CreatureStep(s);
+                EndPhase(s);
+                return;
+            case Phase.Party:
+                BeginPartyPhase(s);
+                return;
+            default:
+                BuildEnemyOrder(s);
+                s.OrderPos = 0;
+                AdvanceToNextActor(s);
+                return;
         }
-        BuildOrder(s, phase == Phase.Party ? Side.Party : Side.Enemy);
-        s.OrderPos = 0;
-        AdvanceToNextActor(s);
     }
 
     /// <summary>
-    /// Works out who acts in a phase. The party: the hero then the Loper, unless the player swapped
-    /// them. Enemies: strongest first (by power), ties broken by unit number.
+    /// The party phase: the hero's and the Loper's turns both start now, so whatever happens at the
+    /// start of a turn happens to both before either acts. The hero has the controls first.
     /// </summary>
-    private static void BuildOrder(BattleState s, Side side)
+    private static void BeginPartyPhase(BattleState s)
     {
         s.OrderCount = 0;
-        if (side == Side.Party)
+        s.Order[s.OrderCount++] = s.Info.HeroIndex;
+        if (s.Info.LoperIndex >= 0) s.Order[s.OrderCount++] = s.Info.LoperIndex;
+        for (int i = 0; i < s.OrderCount; i++)
         {
-            int hero = s.Info.HeroIndex, loper = s.Info.LoperIndex;
-            if (s.LoperFirst && loper >= 0) { s.Order[s.OrderCount++] = loper; s.Order[s.OrderCount++] = hero; }
-            else
-            {
-                s.Order[s.OrderCount++] = hero;
-                if (loper >= 0) s.Order[s.OrderCount++] = loper;
-            }
-            return;
+            int unit = s.Order[i];
+            if (!CanTakeTurn(s, unit)) continue;
+            s.OrderPos = i;
+            StartTurn(s, unit);
+            if (s.Outcome != Outcome.Ongoing) return;
         }
+        NextPartyActor(s);
+    }
 
+    /// <summary>In the party phase: has this unit's turn started and not yet ended?</summary>
+    public static bool PartyTurnOpen(BattleState s, int unit) =>
+        s.Phase == Phase.Party && s.Units[unit].Side == Side.Party && CanTakeTurn(s, unit) && !s.Units[unit].Has(UnitFlags.TurnDone);
+
+    /// <summary>Gives the controls to the first of the pair whose turn is still going, or ends the phase.</summary>
+    private static void NextPartyActor(BattleState s)
+    {
+        for (int i = 0; i < s.OrderCount; i++)
+            if (PartyTurnOpen(s, s.Order[i]))
+            {
+                s.OrderPos = i;
+                return;
+            }
+        s.OrderPos = s.OrderCount;
+        EndPhase(s);
+    }
+
+    /// <summary>
+    /// The enemies' order: strongest first (by power), ties broken by unit number. A beast with a
+    /// handler acts straight after it, as one joint turn, and the pair takes the place of the
+    /// stronger of the two. A wild beast (its handler gone) takes its own place.
+    /// </summary>
+    private static void BuildEnemyOrder(BattleState s)
+    {
+        s.OrderCount = 0;
         for (int i = 0; i < s.Units.Length; i++)
-            if (s.Units[i].Side == Side.Enemy && s.Units[i].Alive) s.Order[s.OrderCount++] = i;
+            if (s.Units[i].Side == Side.Enemy && s.Units[i].Alive && !Led(s, i)) s.Order[s.OrderCount++] = i;
         // Insertion sort: strongest first, then by unit number. Small lists, fully deterministic.
         for (int i = 1; i < s.OrderCount; i++)
         {
@@ -78,9 +112,40 @@ public static partial class Rules
             while (j >= 0 && Before(s, unit, s.Order[j])) { s.Order[j + 1] = s.Order[j]; j--; }
             s.Order[j + 1] = unit;
         }
+        // Each handler's beasts go straight after it, by unit number.
+        for (int i = 0; i < s.OrderCount; i++)
+        {
+            int handler = s.Order[i];
+            for (int b = 0; b < s.Units.Length; b++)
+            {
+                if (!Led(s, b) || s.Units[b].Handler != handler) continue;
+                Array.Copy(s.Order, i + 1, s.Order, i + 2, s.OrderCount - i - 1);
+                s.Order[++i] = b;
+                s.OrderCount++;
+            }
+        }
 
-        static bool Before(BattleState s, int a, int b) =>
-            s.Units[a].Power != s.Units[b].Power ? s.Units[a].Power > s.Units[b].Power : a < b;
+        static bool Before(BattleState s, int a, int b)
+        {
+            int pa = PairPower(s, a), pb = PairPower(s, b);
+            return pa != pb ? pa > pb : a < b;
+        }
+    }
+
+    /// <summary>A living beast whose handler is still in the fight: it acts in its handler's turn.</summary>
+    private static bool Led(BattleState s, int unit)
+    {
+        ref var u = ref s.Units[unit];
+        return u.Alive && u.Handler >= 0 && s.Units[u.Handler].Alive && s.Units[u.Handler].Side == u.Side;
+    }
+
+    /// <summary>A unit's power for the turn order: a handler's is the stronger of its own and its beasts'.</summary>
+    private static int PairPower(BattleState s, int unit)
+    {
+        int power = s.Units[unit].Power;
+        for (int b = 0; b < s.Units.Length; b++)
+            if (Led(s, b) && s.Units[b].Handler == unit) power = Math.Max(power, s.Units[b].Power);
+        return power;
     }
 
     /// <summary>Can this unit take a turn? It must be alive, and on the board or underground.</summary>
@@ -109,16 +174,15 @@ public static partial class Rules
     /// <summary>
     /// The start of a unit's turn: fresh actions and movement, adjusted by its statuses.
     ///   - Rooted or braced: no movement.
-    ///   - Slowed: less movement.
+    ///   - Slowed: half movement.
     ///   - Knocked over: getting up drains movement (once).
     ///   - Dazed: no bonus action this turn (once).
     ///   - A readied Parry lasts until the start of the parrying unit's next turn.
     /// </summary>
     private static void StartTurn(BattleState s, int unit)
     {
-        s.TurnStartBackup = s.Units[unit];
         ref var u = ref s.Units[unit];
-        u.Set(UnitFlags.Moved | UnitFlags.MainUsed | UnitFlags.BonusUsed, false);
+        u.Set(UnitFlags.Moved | UnitFlags.MainUsed | UnitFlags.BonusUsed | UnitFlags.TurnDone, false);
         u.Set(UnitFlags.ParryReady, false);
         u.MoveLeft = TurnMovement(s, unit);
         s.Emit(EventType.TurnStart, unit, unit, u.Pos);
@@ -139,27 +203,43 @@ public static partial class Rules
         OnTurnStart(s, unit);
     }
 
-    /// <summary>Movement for the turn about to start, in half-points.</summary>
+    /// <summary>
+    /// Movement for the turn about to start, in half-points. A slowed unit (or a mounted pair with
+    /// either of them slowed) gets half, rounded down to a half-tile.
+    /// </summary>
     public static int TurnMovement(BattleState s, int unit)
     {
         ref var u = ref s.Units[unit];
         if (Anchored(s, unit)) return 0;
         int move = MountedMovement(s, unit);
         int partner = u.MountedOn >= 0 ? u.MountedOn : u.Rider;
-        if (u.Slowed > 0 || (partner >= 0 && s.Units[partner].Slowed > 0)) move -= s.Data.Rules.SlowAmount;
-        return Math.Max(0, move);
+        if (u.Slowed > 0 || (partner >= 0 && s.Units[partner].Slowed > 0)) move = SlowedMovement(move);
+        return move;
     }
 
-    /// <summary>Ends the current unit's turn and starts the next one.</summary>
+    /// <summary>What slowed leaves of a turn's movement (half-points): half of it.</summary>
+    public static int SlowedMovement(int movement) => movement / 2;
+
+    /// <summary>
+    /// Ends the current unit's turn. In the party phase the partner gets the controls if its turn
+    /// is still going; otherwise the next unit in the order starts its turn.
+    /// </summary>
     private static void EndTurn(BattleState s)
     {
         int unit = CurrentActor(s);
         OnTurnEnd(s, unit);
+        s.Units[unit].Set(UnitFlags.TurnDone);
         ulong checksum = s.Sink.Enabled ? s.Checksum() : 0;
         s.Emit(EventType.TurnEnd, unit, unit, checksum: checksum);
-        s.OrderPos++;
         CheckOutcome(s);
-        if (s.Outcome == Outcome.Ongoing) AdvanceToNextActor(s);
+        if (s.Outcome != Outcome.Ongoing) return;
+        if (s.Phase == Phase.Party)
+        {
+            NextPartyActor(s);
+            return;
+        }
+        s.OrderPos++;
+        AdvanceToNextActor(s);
     }
 
     private static void EndPhase(BattleState s)

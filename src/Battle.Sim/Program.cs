@@ -148,7 +148,8 @@ public static class Program
         }
         Console.WriteLine($"{battles} battle{(battles == 1 ? "" : "s")} of {encounter} in {watch.ElapsedMilliseconds} ms: " +
             $"won {outcomes.GetValueOrDefault(Outcome.PartyWon)}, lost {outcomes.GetValueOrDefault(Outcome.PartyLost)}, " +
-            $"drawn {outcomes.GetValueOrDefault(Outcome.Draw)}; {(double)totalRounds / battles:0.0} rounds on average");
+            $"drawn {outcomes.GetValueOrDefault(Outcome.Draw)}, fled {outcomes.GetValueOrDefault(Outcome.PartyFled)}; " +
+            $"{(double)totalRounds / battles:0.0} rounds on average");
         return 0;
     }
 
@@ -157,6 +158,7 @@ public static class Program
         Outcome.PartyWon => "won",
         Outcome.PartyLost => "lost",
         Outcome.Draw => "draw",
+        Outcome.PartyFled => "fled",
         _ => "ongoing",
     };
 
@@ -241,7 +243,8 @@ public static class Program
         }
         Console.WriteLine($"fuzzed {battles} battles ({party} party, {enemies} enemies) across {encounters.Count} encounters in {watch.ElapsedMilliseconds} ms " +
             $"({decisions} inputs, invariants checked after each): won {outcomes.GetValueOrDefault(Outcome.PartyWon)}, " +
-            $"lost {outcomes.GetValueOrDefault(Outcome.PartyLost)}, drawn {outcomes.GetValueOrDefault(Outcome.Draw)}");
+            $"lost {outcomes.GetValueOrDefault(Outcome.PartyLost)}, drawn {outcomes.GetValueOrDefault(Outcome.Draw)}, " +
+            $"party fled {outcomes.GetValueOrDefault(Outcome.PartyFled)}");
         return 0;
     }
 

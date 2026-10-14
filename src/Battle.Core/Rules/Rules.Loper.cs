@@ -14,10 +14,13 @@ public static partial class Rules
     //   - The hero mounts a Loper on a neighbouring tile, or dismounts to a neighbouring tile.
     //     Either uses all his movement that turn, so he can't have moved first.
     //   - Mounted, the two share a tile and move as one. The hero rides at the Loper's speed on his
-    //     own turn; the Loper can't walk on its turn while carrying him.
+    //     own turn; the Loper can't walk on its turn while carrying him. Their turns run side by
+    //     side, so mounting takes away whatever movement the Loper had left, and dismounting gives
+    //     the Loper its own movement for the turn (it can't have walked while carrying him).
     //   - Each move says whether it works mounted (moves.json "mount": "dismounted" for those that don't).
     //   - Enemies can target either of the pair; area effects and pushes affect both, and the pair
     //     counts as the heavier of the two.
+    //   - Knocking the ridden Loper over throws the hero off (see ThrowRider).
     // ------------------------------------------------------------------
 
     /// <summary>Movement for a unit's turn before statuses: a rider uses its mount's, and a carrying mount has none of its own.</summary>
@@ -127,6 +130,7 @@ public static partial class Rules
             h.Pos = s.Units[loper].Pos;
             h.MoveLeft = 0;
             h.Set(UnitFlags.Moved);
+            s.Units[loper].MoveLeft = 0; // it can't walk while carrying him
             s.Emit(EventType.Mount, a.Actor, loper, from, h.Pos);
             return;
         }
@@ -142,7 +146,59 @@ public static partial class Rules
         s.Place(a.Actor, a.Target.Tile);
         h.MoveLeft = 0;
         h.Set(UnitFlags.Moved);
+        // Free of him, the Loper has its own movement for the rest of its turn, if that's still going.
+        if (PartyTurnOpen(s, mount)) s.Units[mount].MoveLeft = TurnMovement(s, mount);
         s.Emit(EventType.Dismount, a.Actor, mount, at, a.Target.Tile);
         Arrive(s, a.Actor, at);
+    }
+
+    // ---- Thrown off ----
+
+    /// <summary>
+    /// A ridden mount knocked over throws its rider. He lands on the nearest free tile, choosing
+    /// first tiles he could step to (no more than a level up or down), then tiles behind the mount
+    /// (away from whatever knocked it over), then to the sides, then in front. He's knocked over too,
+    /// and a trap where he lands springs on him. With nowhere to land, he stays in the saddle.
+    /// </summary>
+    private static void ThrowRider(BattleState s, int mount, int source)
+    {
+        int rider = s.Units[mount].Rider;
+        if (rider < 0) return;
+        var at = s.Units[mount].Pos;
+        var from = source >= 0 && source != mount && s.Units[source].OnBoard ? s.Units[source].Pos : at;
+        var landing = ThrowLanding(s, at, from);
+        if (landing == Pos.None) return;
+
+        ref var h = ref s.Units[rider];
+        s.Units[mount].Rider = -1;
+        h.MountedOn = -1;
+        h.Set(UnitFlags.OnBoard, false);
+        s.Place(rider, landing);
+        h.MoveLeft = 0;
+        s.Emit(EventType.Thrown, source, rider, at, landing);
+        if (!h.Has(UnitFlags.KnockedOver)) ApplyStatus(s, source, rider, StatusId.KnockedOver, 0);
+        Arrive(s, rider, at);
+    }
+
+    /// <summary>Where a thrown rider lands (see <see cref="ThrowRider"/>), or Pos.None if every tile is taken.</summary>
+    private static Pos ThrowLanding(BattleState s, Pos at, Pos from)
+    {
+        int backX = at.X - from.X, backY = at.Y - from.Y;
+        int height = s.Heights[s.Idx(at)];
+        Pos best = Pos.None;
+        long bestKey = long.MaxValue;
+        for (int tile = 0; tile < s.TileCount; tile++)
+        {
+            if (!s.Standable(tile) || s.Occupant[tile] >= 0) continue;
+            var p = s.PosOf(tile);
+            int distance = p.Manhattan(at);
+            if (distance == 0) continue;
+            int drop = Math.Abs(s.Heights[tile] - height) > 1 ? 1 : 0;
+            int dot = (p.X - at.X) * backX + (p.Y - at.Y) * backY;
+            int side = dot > 0 ? 0 : dot == 0 ? 1 : 2; // behind, beside, in front
+            long key = ((long)distance << 24) | ((long)drop << 22) | ((long)side << 20) | (long)tile;
+            if (key < bestKey) { bestKey = key; best = p; }
+        }
+        return best;
     }
 }
