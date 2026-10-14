@@ -1,59 +1,13 @@
 # M1's stand-ins and open questions
 
 M1 needed an answer to every rule question before a battle could run. The design doc's **M1 audit**
-tab lists each rule M1 needed beyond the doc, and Sam has decided nearly all of them. This file
-lists what's still a stand-in:
-
-- the few rules still marked Proposed in the audit tab, which came out of the decisions of
-  14 October;
-- every number, all of which live in `content/` and can be changed without touching code.
+tab lists each rule M1 needed beyond the doc, and Sam has decided all of them. What's left as a
+stand-in is every number, all of which live in `content/` and can be changed without touching code.
 
 Rules live in `src/Battle.Core/Rules/`, one file per topic.
 
-## Rules still to decide
-
-These follow from the decisions of 14 October. Each is what M1 does now, and the audit tab marks
-each one Proposed.
-
-### Party turns
-
-| Rule | M1 | Where |
-| --- | --- | --- |
-| Both turns start together | The hero's and the Loper's turns both start with the party phase, so a daze or knock-over on either takes effect before either acts. The hero has the controls first | `Rules.Turns.cs` |
-| Mounting with free swapping | Mounting takes away whatever movement the Loper had left. Dismounting gives the Loper its own movement for the turn, since it couldn't walk while carrying him | `Rules.Loper.cs` |
-
-### The joint turn
-
-| Rule | M1 | Where |
-| --- | --- | --- |
-| Its place in the order | The Beastmaster and its Snuffler go where the stronger of the two would: with power 3 and 4, they act first | `Rules.Turns.cs` |
-| Pointing at a tile | It sends the Snuffler digging there that turn only, and doesn't change its target | `Rules.Goblins.cs` |
-| Traps | The Snuffler never chooses to stop on a trap | `Rules.Beasts.cs` |
-
-### Slowed
-
-| Rule | M1 | Where |
-| --- | --- | --- |
-| Rounding | Half the turn's movement, rounded down to a half-tile: the Snuffler's 3 tiles become 1.5 | `Rules.Turns.cs` |
-| Scamper | Scamper's 2 extra tiles aren't halved | `Rules.Goblins.cs` |
-
-### A thrown rider
-
-| Rule | M1 | Where |
-| --- | --- | --- |
-| Where he lands | The nearest free tile. Among the nearest, first one within a level of the Loper's, then behind the Loper (away from what knocked it over), then beside it, then in front | `Rules.Loper.cs` |
-| What it costs him | He's knocked over too, so he loses 3 tiles getting up. A trap where he lands springs on him | `Rules.Loper.cs` |
-| Nowhere to land | Only if every free tile in the arena is taken: then he stays in the saddle | `Rules.Loper.cs` |
-| A rider knocked over alone | Nothing special. No M1 move can do it: the burrow blast hits both of the pair | `Rules.Status.cs` |
-
-### The party fleeing
-
-| Rule | M1 | Where |
-| --- | --- | --- |
-| Range | Counted in straight steps, ignoring walls and height | `Rules.Legal.cs` |
-| Who counts | Enemies, including a wild Snuffler. A burrowed Snuffler counts where it will come up | `Rules.Legal.cs` |
-| A knocked-out Loper | Doesn't have to be on the edge | `Rules.Legal.cs` |
-| When | Either of the pair can call it at any point in its turn. The battle ends at once, as "fled" | `Rules.Legal.cs` |
+M1 shows the player what Easy will: exact HP for every unit. On Normal, enemy HP will show as bars
+without numbers, and on Hard not at all.
 
 ## Numbers and the open question about them
 

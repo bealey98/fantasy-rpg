@@ -25,9 +25,8 @@ like, until one of them ends its turn. With the whole party on the arena's edge 
 (its moves and danger zone), `d` for every enemy's danger zone. `river-crossing` is the small test
 fight from the plan.
 
-The rules M1 needed beyond the design doc are listed in the doc's M1 audit tab, with which are
-decided. `docs/placeholders.md` lists what's still a stand-in: every number, and the few rules not
-yet decided.
+The rules M1 needed beyond the design doc are listed in the doc's M1 audit tab, all of them now
+decided. `docs/placeholders.md` lists what's still a stand-in: every number.
 
 ## Layout
 
