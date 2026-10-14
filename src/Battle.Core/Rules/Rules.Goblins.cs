@@ -127,7 +127,9 @@ public static partial class Rules
         if (trap == null) return;
         if (trap.Damage > 0) DealDamage(s, owner, body, trap.Damage, trap.Index, detail: "snap trap");
         if (s.Units[body].Alive) ApplyStatus(s, owner, body, trap.Status, trap.StatusRounds, trap.Index);
-        if (CurrentActor(s) == body) s.Units[body].MoveLeft = 0;
+        // It stops whoever is walking: the unit itself, or the hero riding it.
+        int actor = CurrentActor(s);
+        if (actor >= 0 && (actor == body || s.Units[actor].MountedOn == body)) s.Units[actor].MoveLeft = 0;
     }
 
     // ---- Point and Whip ----

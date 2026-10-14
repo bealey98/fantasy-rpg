@@ -89,4 +89,24 @@ public class LogTests
         fields.Add(current.ToString());
         return fields;
     }
+
+    [Test]
+    public void TimingRollsDependOnTheBattlesProgressNotOnHowOftenTheyreAsked()
+    {
+        var s = EncounterLoader.CreateBattle(TestContent.Dir, TestContent.Data, "first-goblins", 3, battleId: 1);
+        Rules.Start(s);
+        var timing = new TimingModel(TestContent.Data, "average", 3);
+        var strike = BattleAction.Use(0, s.Data.Move("strike"), Target.OfUnit(1));
+        var first = timing.Grade(s, strike, TimingNeed.Attack);
+        for (int i = 0; i < 20; i++)
+            Assert.Equal(first, timing.Grade(s, strike, TimingNeed.Attack), "the same moment of the battle gets the same grade, so undo can't re-roll it");
+
+        var counts = new int[4];
+        for (int seq = 0; seq < 3000; seq++)
+        {
+            s.Seq = seq;
+            counts[(int)timing.Grade(s, strike, TimingNeed.Attack)]++;
+        }
+        Assert.True(counts[(int)Timing.Good] is > 1650 and < 1950, $"about 60% good at average skill, got {counts[(int)Timing.Good]} of 3000");
+    }
 }

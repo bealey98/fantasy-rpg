@@ -113,12 +113,6 @@ public sealed class Game
                 return;
         }
 
-        if (words.Length == 2 && int.TryParse(words[0], out _) && int.TryParse(words[1], out _))
-        {
-            MoveTo(actor, words[0], words[1]);
-            return;
-        }
-
         if (int.TryParse(words[0], out int choice) && choice >= 1 && choice <= moves.Count)
         {
             var options = moves[choice - 1].Options;
@@ -234,7 +228,7 @@ public sealed class Game
         if (actor >= 0 && S.Units[actor].Side == Side.Party)
         {
             ref var u = ref S.Units[actor];
-            sb.AppendLine($"movement left {u.MoveLeft / 2.0:0.#} tiles · main {(u.Has(UnitFlags.MainUsed) ? "used" : "ready")} · " +
+            sb.AppendLine($"movement left {Tiles(u.MoveLeft)} · main {(u.Has(UnitFlags.MainUsed) ? "used" : "ready")} · " +
                 $"bonus {(u.Has(UnitFlags.BonusUsed) ? "used" : "ready")}");
             var moves = MoveChoices();
             var items = moves.Select((m, i) => $"{i + 1} {m.Label}{(m.Options.Count > 1 ? $" [{m.Options.Count}]" : "")}").ToList();
@@ -261,6 +255,8 @@ public sealed class Game
             ? "Root sources in reach: " + string.Join("; ", sources)
             : "No Root source in reach: Bind will only slow and Tether lasts a round";
     }
+
+    private static string Tiles(int halfPoints) => halfPoints == 2 ? "1 tile" : $"{halfPoints / 2.0:0.#} tiles";
 
     private static string Sim(Outcome outcome) => outcome switch
     {
@@ -289,7 +285,7 @@ public sealed class Game
 
     private const string Help = """
         commands:
-          m X Y  (or just X Y)   walk to a tile
+          m X Y                  walk to a tile (x across, y down)
           N                      use action N from the list (you'll be asked for a target)
           N T                    use action N on target T
           e                      end this unit's turn
@@ -298,5 +294,10 @@ public sealed class Game
           u                      undo your last action this turn
           l                      the last 20 events
           q                      quit (the battle so far is still logged)
+        on the board:
+          H L                    the hero and the Loper; letters are enemies (i a to inspect one)
+          * (or highlighted)     where the unit whose turn it is can walk
+          ^  "                   a goblin's snap trap (bites anyone)  ·  a root trap (catches enemies)
+          !                      rumbling ground: something will burst out of it next turn
         """;
 }

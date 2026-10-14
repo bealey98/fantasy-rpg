@@ -287,7 +287,9 @@ def draw_board(board: Board, show_heights: bool, show_danger: bool) -> Text:
             elif (x, y) in board.rumbles:
                 glyph, style = "!", "bold yellow"
             elif (x, y) in board.traps:
-                glyph, style = "^", "bold yellow"
+                # A goblin's snap trap bites anyone; the hero's root traps only catch enemies.
+                snap = "snap" in board.traps[(x, y)]
+                glyph, style = ("^", "bold yellow") if snap else ('"', "bold green3")
             elif board.features[y][x] != ".":
                 glyph = board.features[y][x]
                 style = "grey50" if (x, y) in board.dead_features else "green3"

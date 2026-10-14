@@ -55,7 +55,8 @@ public static class AsciiRender
                 fg = s.Units[shown].Side == Side.Party ? Ansi.Party : Ansi.Enemy;
             }
             else if (s.Rumble[i] >= 0) { glyph = '!'; fg = Ansi.Warn; }
-            else if (s.Trap[i] != TrapKind.None) { glyph = '^'; fg = Ansi.Warn; }
+            else if (s.Trap[i] == TrapKind.Snap) { glyph = '^'; fg = Ansi.Warn; }
+            else if (s.Trap[i] != TrapKind.None) { glyph = '"'; fg = Ansi.Feature; }
             else if (s.Feature[i] >= 0)
             {
                 glyph = s.FeatureAt(i)!.Glyph;

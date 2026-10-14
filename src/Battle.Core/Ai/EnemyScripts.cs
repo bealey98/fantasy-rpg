@@ -5,6 +5,7 @@ namespace Battle.Core.Ai;
 /// the baseline trained enemies have to beat, and how early content ships.
 ///   Cutter       closes in and stabs, ganging up where it can; headbutts the hero to cost him his
 ///                next bonus action; once wounded, swaps a mate into its place (After you).
+///   Taunted      any goblin goes for its taunter, even where the rules would let it hit another.
 ///   Plinker      keeps its distance, high up if it can; throws dirt at whoever is about to hit a
 ///                goblin, otherwise plinks; drops its snap trap where the party would stand to attack.
 ///   Beastmaster  hangs back near its beast, points it at the best target and whips it on; lashes
@@ -23,6 +24,8 @@ public sealed class EnemyScripts : PlannedController
     private readonly List<(Target, Target)> _options = new();
     private readonly List<int> _party = new();
     private readonly List<int[]> _partyReach = new();
+    private readonly List<bool[]> _partyDanger = new();
+    private readonly List<int> _partyHit = new();
     private bool[] _mark = Array.Empty<bool>();
     private bool[] _goals = Array.Empty<bool>();
     private int[] _field = Array.Empty<int>();
@@ -73,10 +76,12 @@ public sealed class EnemyScripts : PlannedController
             return;
         }
 
-        // The best attack it could make this turn, from anywhere it could get to.
+        // The best attack it could make this turn, from anywhere it could get to. A taunted goblin
+        // only goes for its taunter, even where the rules would let it hit someone else.
         var scamper = Tactics.Ready(s, me, MoveKind.Scamper);
         Candidates(s, me, scamper);
         var probe = s.Clone();
+        int taunter = Taunter(s, me);
         BattleAction? best = null;
         Pos bestTile = u.Pos;
         bool bestScamper = false;
@@ -93,7 +98,8 @@ public sealed class EnemyScripts : PlannedController
                     foreach (var (target, _) in _t.TargetsFrom(probe, me, p, move))
                     {
                         if (target.Kind != TargetKind.Unit || !Rules.AreEnemies(s, me, target.Unit)) continue;
-                        int score = AttackScore(s, me, target.Unit, move) - (withScamper ? 5 : 0) + Noise(9);
+                        if (taunter >= 0 && target.Unit != taunter) continue;
+                        int score = AttackScore(s, me, target.Unit, move) - (withScamper ? 10 : 0) + Noise(9);
                         if (score <= bestScore) continue;
                         bestScore = score;
                         best = BattleAction.Use(me, move, target);
@@ -148,7 +154,8 @@ public sealed class EnemyScripts : PlannedController
     private int PickTarget(BattleState s, int me)
     {
         ref var u = ref s.Units[me];
-        if (u.Taunted > 0 && u.TauntBy >= 0 && s.Units[u.TauntBy].Alive && s.Units[u.TauntBy].OnBoard) return u.TauntBy;
+        int taunter = Taunter(s, me);
+        if (taunter >= 0) return taunter;
         Tactics.ReachFrom(s, me, _reach);
         int best = -1, bestScore = int.MinValue;
         for (int i = 0; i < s.Units.Length; i++)
@@ -186,11 +193,12 @@ public sealed class EnemyScripts : PlannedController
     private void Plinker(BattleState s, int me, List<BattleAction> plan)
     {
         ref var u = ref s.Units[me];
-        PrepareParty(s);
+        PrepareParty(s, me);
         var scamper = Tactics.Ready(s, me, MoveKind.Scamper);
         bool mainFree = !u.Has(UnitFlags.MainUsed);
         Candidates(s, me, scamper);
         var probe = s.Clone();
+        int taunter = Taunter(s, me);
 
         Pos bestTile = u.Pos;
         bool bestScamper = false;
@@ -201,8 +209,8 @@ public sealed class EnemyScripts : PlannedController
             bool withScamper = pass == 1;
             foreach (var p in withScamper ? _far : _near)
             {
-                var (hitters, nearest) = PartyReach(s, p);
-                int score = -hitters * 60 + Math.Min(Cost(nearest), 12) * 4 + s.Heights[s.Idx(p)] * 8
+                var (hitters, lethal, nearest) = PartyReach(s, me, p);
+                int score = -hitters * 50 - lethal * 100 + Math.Min(Cost(nearest), 12) * 4 + s.Heights[s.Idx(p)] * 8
                     - (withScamper ? 10 : 0) + (p == u.Pos ? Stay(s, me) : 0) + Noise(5);
                 BattleAction? shot = null;
                 int shotScore = 0;
@@ -214,6 +222,7 @@ public sealed class EnemyScripts : PlannedController
                         foreach (var (target, _) in _t.TargetsFrom(probe, me, p, move))
                         {
                             if (target.Kind != TargetKind.Unit || !Rules.AreEnemies(s, me, target.Unit)) continue;
+                            if (taunter >= 0 && target.Unit != taunter) continue;
                             int v = ShotScore(s, me, target.Unit, move);
                             if (v > shotScore) { shotScore = v; shot = BattleAction.Use(me, move, target); }
                         }
@@ -280,7 +289,7 @@ public sealed class EnemyScripts : PlannedController
     private void Beastmaster(BattleState s, int me, List<BattleAction> plan)
     {
         ref var u = ref s.Units[me];
-        PrepareParty(s);
+        PrepareParty(s, me);
         int beast = Rules.BeastOf(s, me);
         var point = Tactics.Ready(s, me, MoveKind.Point);
         var whip = Tactics.Ready(s, me, MoveKind.Whip);
@@ -306,6 +315,7 @@ public sealed class EnemyScripts : PlannedController
         var lash = mainFree ? Tactics.Ready(s, me, MoveKind.Ranged) : null;
         Candidates(s, me, order == null && !wantWhip ? scamper : null);
         var probe = s.Clone();
+        int taunter = Taunter(s, me);
         Pos bestTile = u.Pos;
         bool bestScamper = false;
         BattleAction? bestLash = null;
@@ -315,8 +325,9 @@ public sealed class EnemyScripts : PlannedController
             bool withScamper = pass == 1;
             foreach (var p in withScamper ? _far : _near)
             {
-                var (hitters, nearest) = PartyReach(s, p);
-                int score = -hitters * 50 + Math.Min(Cost(nearest), 10) * 4 - (withScamper ? 10 : 0) + (p == u.Pos ? Stay(s, me) : 0) + Noise(5);
+                var (hitters, lethal, nearest) = PartyReach(s, me, p);
+                int score = -hitters * 50 - lethal * 100 + Math.Min(Cost(nearest), 10) * 4 - (withScamper ? 10 : 0)
+                    + (p == u.Pos ? Stay(s, me) : 0) + Noise(5);
                 if (beastOut)
                 {
                     score -= Math.Max(0, p.Manhattan(beastPos) - 2) * 6;
@@ -328,6 +339,7 @@ public sealed class EnemyScripts : PlannedController
                     foreach (var (target, _) in _t.TargetsFrom(probe, me, p, lash))
                     {
                         if (target.Kind != TargetKind.Unit || !Rules.AreEnemies(s, me, target.Unit)) continue;
+                        if (taunter >= 0 && target.Unit != taunter) continue;
                         int v = AttackScore(s, me, target.Unit, lash);
                         if (v > hitScore) { hitScore = v; hit = BattleAction.Use(me, lash, target); }
                     }
@@ -514,14 +526,14 @@ public sealed class EnemyScripts : PlannedController
     {
         ref var u = ref s.Units[me];
         if (s.OnEdge(u.Pos)) return;
-        PrepareParty(s);
+        PrepareParty(s, me);
         Array.Clear(_goals, 0, s.TileCount);
         for (int tile = 0; tile < s.TileCount; tile++)
             if (s.OnEdge(s.PosOf(tile)) && s.Trap[tile] == TrapKind.None && Rules.CanEndOn(s, me, tile)) _goals[tile] = true;
         _t.CostToGo(s, me, _goals, _field);
         var scamper = Tactics.Ready(s, me, MoveKind.Scamper);
         var (tile2, withScamper, _) = BestTile(s, me, (p, scampering) =>
-            -Cost(_field[s.Idx(p)]) * 20 + Math.Min(Cost(PartyDistanceCost(s, p)), 10) * 2 - (scampering ? 5 : 0));
+            -Cost(_field[s.Idx(p)]) * 20 + Math.Min(Cost(PartyDistanceCost(s, me, p)), 10) * 2 - (scampering ? 5 : 0));
         Go(s, me, scamper, withScamper, tile2, plan);
     }
 
@@ -541,6 +553,13 @@ public sealed class EnemyScripts : PlannedController
     }
 
     private int Noise(int max) => _rng.Next(max + 1);
+
+    /// <summary>The unit that has taunted this one, if the taunt is still on and the taunter still in the fight; else -1.</summary>
+    private static int Taunter(BattleState s, int me)
+    {
+        ref var u = ref s.Units[me];
+        return u.Taunted > 0 && u.TauntBy >= 0 && s.Units[u.TauntBy].Alive && s.Units[u.TauntBy].OnBoard ? u.TauntBy : -1;
+    }
 
     /// <summary>A preference for staying put, much stronger once it has already walked this turn, so it doesn't dither.</summary>
     private static int Stay(BattleState s, int me) => s.Units[me].Has(UnitFlags.Moved) ? 25 : 3;
@@ -607,32 +626,50 @@ public sealed class EnemyScripts : PlannedController
         for (int tile = 0; tile < s.TileCount; tile++) _reach[tile] = Rules.ReachCost(s.PosOf(tile));
     }
 
-    /// <summary>Works out how far each of the party could walk, for judging how safe a tile is.</summary>
-    private void PrepareParty(BattleState s)
+    /// <summary>
+    /// Sizes up the party for judging how safe a tile is for this goblin: how far each of them would
+    /// have to walk, every tile each could hit next turn (its danger zone), and its hardest hit on
+    /// this goblin.
+    /// </summary>
+    private void PrepareParty(BattleState s, int me)
     {
         _party.Clear();
+        _partyDanger.Clear();
+        _partyHit.Clear();
         for (int i = 0; i < s.Units.Length; i++)
             if (s.Units[i].Side == Side.Party && s.Units[i].Alive && s.Units[i].OnBoard && s.Units[i].Rider < 0) _party.Add(i);
         while (_partyReach.Count < _party.Count) _partyReach.Add(new int[s.TileCount]);
-        for (int k = 0; k < _party.Count; k++) Tactics.ReachFrom(s, s.Units[_party[k]].MountedOn >= 0 ? s.Units[_party[k]].MountedOn : _party[k], _partyReach[k]);
-    }
-
-    /// <summary>How many of the party could hit a goblin on this tile next turn, and how far (half-points) the nearest would have to walk.</summary>
-    private (int Hitters, int Nearest) PartyReach(BattleState s, Pos p)
-    {
-        int hitters = 0, nearest = Tactics.Far;
         for (int k = 0; k < _party.Count; k++)
         {
             int unit = _party[k];
-            int cost = Tactics.ApproachCost(s, _partyReach[k], s.Units[unit].Pos, p);
-            nearest = Math.Min(nearest, cost);
-            int charge = (Rules.KitMove(s, unit, MoveKind.Charge)?.Charge ?? 0) * 2;
-            if (cost != Tactics.Far && cost <= Tactics.NextTurnMovement(s, unit) + charge) hitters++;
+            Tactics.ReachFrom(s, s.Units[unit].MountedOn >= 0 ? s.Units[unit].MountedOn : unit, _partyReach[k]);
+            _partyDanger.Add(Observation.DangerOf(s, unit));
+            int hardest = 0;
+            foreach (int m in s.Info.Kits[unit])
+                if (s.Data.Moves[m].UsesMain) hardest = Math.Max(hardest, Tactics.Damage(s, unit, me, s.Data.Moves[m]));
+            _partyHit.Add(hardest);
         }
-        return (hitters, nearest);
     }
 
-    private int PartyDistanceCost(BattleState s, Pos p) => PartyReach(s, p).Nearest;
+    /// <summary>
+    /// For a goblin on this tile: how many of the party could hit it next turn, how many of those
+    /// could kill it outright, and how far (half-points) the nearest would have to walk to reach it.
+    /// </summary>
+    private (int Hitters, int Lethal, int Nearest) PartyReach(BattleState s, int me, Pos p)
+    {
+        int hitters = 0, lethal = 0, nearest = Tactics.Far;
+        int tile = s.Idx(p);
+        for (int k = 0; k < _party.Count; k++)
+        {
+            nearest = Math.Min(nearest, Tactics.ApproachCost(s, _partyReach[k], s.Units[_party[k]].Pos, p));
+            if (!_partyDanger[k][tile]) continue;
+            hitters++;
+            if (_partyHit[k] >= s.Units[me].Hp) lethal++;
+        }
+        return (hitters, lethal, nearest);
+    }
+
+    private int PartyDistanceCost(BattleState s, int me, Pos p) => PartyReach(s, me, p).Nearest;
 
     /// <summary>Straight-step distance to the nearest of the party.</summary>
     private static int PartyDistance(BattleState s, Pos p)

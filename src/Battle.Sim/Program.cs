@@ -12,6 +12,8 @@ public static class Program
 {
     public static int Main(string[] args)
     {
+        // The board uses a few non-ASCII characters (HP bars, arrows); Windows consoles need telling.
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
         var a = new Args(args);
         try
         {

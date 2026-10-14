@@ -90,7 +90,7 @@ if (length(event_files) > 0) {
     if (nrow(before) == 0) "" else before$move[which.max(before$seq)]
   }, character(1))
 
-  rule(sprintf("Damage by move (%d battles, %d hits)", length(event_files), nrow(damage)))
+  rule(sprintf("Damage by move (%d battle%s, %d hits)", length(event_files), if (length(event_files) == 1) "" else "s", nrow(damage)))
   moves <- sort(unique(damage$move))
   table3 <- do.call(rbind, lapply(moves, function(m) {
     d <- damage[damage$move == m, ]

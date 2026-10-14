@@ -18,11 +18,15 @@ public interface ITimingSource
     Timing Grade(BattleState s, in BattleAction action, TimingNeed need);
 }
 
-/// <summary>A simulated player's timing: grades drawn from a skill level's chances in rules.json.</summary>
+/// <summary>
+/// A simulated player's timing: grades drawn from a skill level's chances in rules.json. Each roll
+/// depends only on the seed and how far the battle has got, so undoing an action in terminal play
+/// and trying again gets the same grade rather than a fresh roll.
+/// </summary>
 public sealed class TimingModel : ITimingSource
 {
     private readonly int[] _chances;
-    private Rng _rng;
+    private readonly ulong _seed;
 
     public string Skill { get; }
 
@@ -32,12 +36,13 @@ public sealed class TimingModel : ITimingSource
             throw new ArgumentException($"no timing skill called '{skill}' in rules.json (try {string.Join(", ", data.Rules.TimingSkill.Keys)})");
         _chances = chances;
         Skill = skill;
-        _rng = new Rng(seed ^ 0x7417_1D35_C0FF_EE00UL);
+        _seed = seed ^ 0x7417_1D35_C0FF_EE00UL;
     }
 
     public Timing Grade(BattleState s, in BattleAction action, TimingNeed need)
     {
-        int roll = _rng.Next(100);
+        var rng = new Rng(_seed ^ ((ulong)(uint)s.Seq * 0x9E37_79B9_7F4A_7C15UL));
+        int roll = rng.Next(100);
         if (roll < _chances[0]) return Timing.Fumble;
         if (roll < _chances[0] + _chances[1]) return Timing.Good;
         return Timing.Perfect;
