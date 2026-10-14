@@ -1,0 +1,3 @@
+date,rules,content,machine,mode,battles,inputs,seconds,inputs_per_second
+2026-10-14 00:24,0.2.0,sha256:b10a14c037a3,"Ubuntu 24.04.5 LTS · 2 cores · .NET 8.0.31",random,3449,1009043,4.484,225044
+2026-10-14 00:24,0.2.0,sha256:b10a14c037a3,"Ubuntu 24.04.5 LTS · 2 cores · .NET 8.0.31",scripted,5397,245669,4.456,55138

@@ -3,7 +3,7 @@ namespace Battle.Core;
 /// <summary>
 /// Rules that must always hold, checked after every action in tests, fuzzing and debug builds:
 /// one unit per tile, HP within its limits, nobody standing on no ground, and the bookkeeping
-/// (who stands where, who rides whom) agreeing with itself.
+/// (who stands where, who rides whom, who is under which rumbling tile) agreeing with itself.
 /// </summary>
 public static class Invariants
 {
@@ -67,6 +67,13 @@ public static class Invariants
                 if (u.OnBoard) return $"{name} is burrowed but on the board";
                 if (u.BurrowTo.IsNone || s.Rumble[s.Idx(u.BurrowTo)] != i) return $"{name} is burrowed without a rumbling tile";
             }
+        }
+
+        for (int tile = 0; tile < s.TileCount; tile++)
+        {
+            int beast = s.Rumble[tile];
+            if (beast >= 0 && (!s.Units[beast].Has(UnitFlags.Burrowed) || s.Units[beast].BurrowTo != s.PosOf(tile)))
+                return $"the ground at {s.PosOf(tile)} rumbles for {s.Label(beast)}, who isn't under it";
         }
 
         for (int t = 0; t < s.TetherCount; t++)

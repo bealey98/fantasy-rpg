@@ -1,0 +1,8 @@
+// Chapter 1's first encounter: two Cutters and a Plinker in a forest glade.
+// The Plinker starts on the rocky rise; a small ravine to the south-west is worth shoving goblins into.
+{
+  "arena": "goblin-glade",
+  "enemies": { "a": "cutter", "b": "cutter", "c": "plinker" },
+  "party": { "weapon_main": ["strike", "bull_rush"], "weapon_bonus": "shove", "elderwood_tier": 1 },
+  "first_phase": "party"
+}

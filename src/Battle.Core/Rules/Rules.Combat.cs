@@ -11,7 +11,9 @@ public static partial class Rules
     // Who can be hit
     // ------------------------------------------------------------------
 
-    public static bool AreEnemies(BattleState s, int a, int b) => s.Units[a].Side != s.Units[b].Side;
+    /// <summary>Opposite sides are enemies, and a wild beast (its handler gone) is everyone's enemy.</summary>
+    public static bool AreEnemies(BattleState s, int a, int b) =>
+        a != b && (s.Units[a].Side != s.Units[b].Side || IsWild(s, a) || IsWild(s, b));
 
     /// <summary>
     /// Adds the living enemies of <paramref name="actor"/> standing on a tile: the unit there and, for
@@ -105,7 +107,7 @@ public static partial class Rules
     }
 
     /// <summary>Gang up: extra damage when another goblin is also next to the target.</summary>
-    private static int GangUpBonus(BattleState s, int attacker, int target, MoveDef move)
+    public static int GangUpBonus(BattleState s, int attacker, int target, MoveDef move)
     {
         if (move.GangUp <= 0) return 0;
         var where = s.Units[target].Pos;

@@ -22,7 +22,4 @@ public static partial class Rules
                 break;
         }
     }
-
-    /// <summary>Movement a unit could add this turn on top of its normal allowance (Scamper, later).</summary>
-    public static int ExtraMovementAvailable(BattleState s, int unit) => 0;
 }

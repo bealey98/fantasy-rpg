@@ -18,7 +18,13 @@ public static partial class Rules
             case MoveKind.Tether: TetherTargets(s, actor, move, output); break;
             case MoveKind.Taunt: TauntTargets(s, actor, move, output); break;
             case MoveKind.Brace: BraceTargets(s, actor, output); break;
-            default: break; // not in the game yet
+            case MoveKind.Ranged: RangedTargets(s, actor, move, output); break;
+            case MoveKind.Swap: SwapTargets(s, actor, output); break;
+            case MoveKind.Scamper: ScamperTargets(s, actor, output); break;
+            case MoveKind.Trap: TrapTargets(s, actor, move, output); break;
+            case MoveKind.Point: PointTargets(s, actor, move, output); break;
+            case MoveKind.Whip: WhipTargets(s, actor, move, output); break;
+            case MoveKind.Burrow: BurrowTargets(s, actor, move, output); break;
         }
     }
 
@@ -33,7 +39,13 @@ public static partial class Rules
             case MoveKind.Tether: ExecuteTether(s, a, move); break;
             case MoveKind.Taunt: ExecuteTaunt(s, a, move); break;
             case MoveKind.Brace: ExecuteBrace(s, a, move); break;
-            default: throw new IllegalActionException($"{move.Name} ({move.Kind}) isn't implemented yet");
+            case MoveKind.Ranged: Attack(s, a.Actor, a.Target.Unit, move, a.Timing, AttackKind.Ranged); break;
+            case MoveKind.Swap: ExecuteSwap(s, a, move); break;
+            case MoveKind.Scamper: ExecuteScamper(s, a, move); break;
+            case MoveKind.Trap: ExecuteTrap(s, a, move); break;
+            case MoveKind.Point: ExecutePoint(s, a, move); break;
+            case MoveKind.Whip: ExecuteWhip(s, a, move); break;
+            case MoveKind.Burrow: ExecuteBurrow(s, a, move); break;
         }
     }
 
@@ -52,17 +64,32 @@ public static partial class Rules
                     if (s.InBounds(p) && MeleeReach(s, from, p)) mark[s.Idx(p)] = true;
                 }
                 break;
+            case MoveKind.Ranged:
+                for (int tile = 0; tile < s.TileCount; tile++)
+                {
+                    var p = s.PosOf(tile);
+                    if (p != from && InReach(s, move, from, p)) mark[tile] = true;
+                }
+                break;
+            case MoveKind.Burrow:
+                // Nothing yet: a beast that digs in this turn bursts out on its next one, and by then
+                // the danger zone shows the blast around its rumbling tile (see Observation).
+                break;
         }
     }
 
-    /// <summary>Moves that need more than a free action slot. Dark moves need something to pay with.</summary>
+    /// <summary>
+    /// Moves that need more than a free action slot. Dark moves need something to pay with, and a
+    /// fleeing goblin can only scamper.
+    /// </summary>
     private static bool ExtraAvailability(BattleState s, int actor, MoveDef move)
     {
         if (move.Source == SourceKind.Dark && !CanPayDark(s, actor, move)) return false;
-        return true;
+        return FleeingAllows(s, actor, move);
     }
 
-    /// <summary>Can an area move aimed at a tile hurt the party? (Burrow, later.)</summary>
-    private static bool AreaCanHurtParty(BattleState s, in BattleAction a, MoveDef move) => false;
+    /// <summary>Can an area move hurt the party? Only a Burrow bursting out near them.</summary>
+    private static bool AreaCanHurtParty(BattleState s, in BattleAction a, MoveDef move) =>
+        move.Kind == MoveKind.Burrow && BurrowCanHurtParty(s, a, move);
 
 }

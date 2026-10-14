@@ -28,6 +28,7 @@ public static class RulesLoader
         ["edges_are_walls"] = (r, v, k) => r.EdgesAreWalls = Bool(v, k),
         ["source_range"] = (r, v, k) => r.SourceRange = Int(v, k),
         ["tether_max_length"] = (r, v, k) => r.TetherMaxLength = Int(v, k),
+        ["goblins_flee"] = (r, v, k) => r.FleeEnabled = Bool(v, k),
     };
 
     /// <summary>{"fumble": 0, "good": 1, "perfect": 2} as [0, 1, 2].</summary>

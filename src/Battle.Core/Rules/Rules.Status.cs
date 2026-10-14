@@ -26,13 +26,19 @@ public static partial class Rules
         _ => "",
     };
 
-    /// <summary>Puts a status on a unit. A timed status already running is extended to the longer of the two.</summary>
+    /// <summary>
+    /// Puts a status on a unit. A timed status already running is extended to the longer of the two.
+    /// A status counts from the phase it lands in, so one that lands during its victim's own phase
+    /// (it stepped on a trap) gets one more phase end, to last through the victim's next turn too.
+    /// Statuses a unit gives itself (Brace) don't.
+    /// </summary>
     public static void ApplyStatus(BattleState s, int source, int target, StatusId status, int rounds, int move = -1)
     {
         if (status == StatusId.None) return;
         ref var t = ref s.Units[target];
         if (!t.Alive) return;
         int timer = Rounds(Math.Max(1, rounds));
+        if (source != target && ActingSide(s) == t.Side) timer++;
         switch (status)
         {
             case StatusId.Rooted:
@@ -63,6 +69,14 @@ public static partial class Rules
         bool timed = status is not (StatusId.Dazed or StatusId.KnockedOver);
         s.Emit(EventType.Status, source, target, t.Pos, amount: timed ? Math.Max(1, rounds) : 0, move: move, detail: StatusName(status));
     }
+
+    /// <summary>The side whose phase it is, or null between them (the creatures step).</summary>
+    private static Side? ActingSide(BattleState s) => s.Phase switch
+    {
+        Phase.Party => Side.Party,
+        Phase.Enemy => Side.Enemy,
+        _ => null,
+    };
 
     /// <summary>
     /// Rooted or braced units can't move or be moved. For a rider and its mount, either one being

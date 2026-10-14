@@ -19,7 +19,11 @@ public class GoldenTests
     private static readonly (string Encounter, ulong Seed)[] Specs =
     [
         ("river-crossing", 1),
-        ("river-crossing", 2),
+        ("first-goblins", 1),
+        ("first-goblins", 2),
+        ("goblin-camp", 1),
+        ("goblin-camp", 2),
+        ("goblin-camp-tier2", 1),
     ];
 
     private static string Dir => Path.Combine(TestContent.RepoRoot, "tests", "golden");
@@ -62,7 +66,7 @@ public class GoldenTests
         {
             var state = EncounterLoader.CreateBattle(TestContent.Dir, TestContent.Data, encounter, seed, battleId: 1);
             var log = new BattleLog(state);
-            var runner = new BattleRunner(state, Scripts.For(Side.Party), Scripts.For(Side.Enemy),
+            var runner = new BattleRunner(state, Scripts.For(Side.Party, seed), Scripts.For(Side.Enemy, seed),
                 new TimingModel(TestContent.Data, "average", seed));
             log.Attach(runner);
             runner.Run();

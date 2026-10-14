@@ -12,7 +12,7 @@ public class LogTests
     {
         var state = EncounterLoader.CreateBattle(TestContent.Dir, TestContent.Data, encounter, seed, battleId: 1);
         var log = new BattleLog(state);
-        var runner = new BattleRunner(state, Scripts.For(Side.Party), Scripts.For(Side.Enemy), new TimingModel(TestContent.Data, "average", seed));
+        var runner = new BattleRunner(state, Scripts.For(Side.Party, seed), Scripts.For(Side.Enemy, seed), new TimingModel(TestContent.Data, "average", seed));
         log.Attach(runner);
         runner.Run();
         return (state, log, runner);

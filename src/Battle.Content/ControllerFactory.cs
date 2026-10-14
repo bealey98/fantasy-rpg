@@ -10,7 +10,7 @@ public static class ControllerFactory
 
     public static IController Create(string name, Side side, ulong seed) => name switch
     {
-        "scripted" => Scripts.For(side),
+        "scripted" => Scripts.For(side, seed),
         "simple" => new SimpleScript(),
         "random" => new RandomController(seed + (side == Side.Party ? 1UL : 2UL)),
         _ => throw new ContentException($"unknown controller '{name}' (choose {string.Join(", ", Names)})"),

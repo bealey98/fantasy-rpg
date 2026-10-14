@@ -7,10 +7,12 @@ public static class TestBattles
 {
     /// <summary>
     /// A battle on an inline arena. Enemy letters default to Cutters. The Loper joins only if the
-    /// arena places one (or the party setup says the hero starts mounted).
+    /// arena places one (or the party setup says the hero starts mounted). Goblins don't flee unless
+    /// <paramref name="flee"/> is set, so a lone goblin can stand in as a target.
     /// </summary>
     public static BattleState Create(string arenaText, Dictionary<char, string>? enemies = null,
-        PartySetup? party = null, ulong seed = 1, Dictionary<char, char>? handlers = null, Side firstPhase = Side.Party)
+        PartySetup? party = null, ulong seed = 1, Dictionary<char, char>? handlers = null, Side firstPhase = Side.Party,
+        bool flee = false)
     {
         var arena = TestContent.Parse(arenaText);
         enemies ??= arena.Units.Where(u => char.IsLower(u.Glyph)).ToDictionary(u => u.Glyph, _ => "cutter");
@@ -25,7 +27,7 @@ public static class TestBattles
             Party = party,
             FirstPhase = firstPhase,
         };
-        var state = BattleFactory.Create(TestContent.Data, arena, encounter, seed);
+        var state = BattleFactory.Create(flee ? TestContent.Data : TestContent.CalmData, arena, encounter, seed);
         state.Sink = new EventList();
         return state;
     }

@@ -1,0 +1,9 @@
+// Chapter 1's first bigger fight: the Beastmaster and its Snuffler, with two Cutters and a Plinker
+// on a lookout reached by a ladder.
+{
+  "arena": "goblin-camp",
+  "enemies": { "a": "cutter", "b": "cutter", "c": "plinker", "d": "beastmaster", "s": "snuffler" },
+  "handlers": { "s": "d" },
+  "party": { "weapon_main": ["strike", "bull_rush"], "weapon_bonus": "shove", "elderwood_tier": 1 },
+  "first_phase": "party"
+}

@@ -40,6 +40,9 @@
   // Tether: the furthest apart its two ends can be when it's cast.
   "tether_max_length": 4,
 
+  // Goblin morale: the only goblin left against more than one of the party runs for the edge.
+  "goblins_flee": true,
+
   // Simulated timing for each skill level: chance in 100 of [fumble, good, perfect].
   // Used by the simulator, and by terminal play until the real timing minigames exist.
   "timing_skill": {

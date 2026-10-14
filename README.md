@@ -9,6 +9,22 @@ M1's question is: **are the fights interesting decisions?**
 - Python 3.10 or later with `rich`, for the replay viewer (from step 4).
 - R, optionally, for the analysis scripts (from step 8).
 
+## Playing M1
+
+```
+dotnet run --project src/Battle.Play -- first-goblins                 # two Cutters and a Plinker in a glade
+dotnet run --project src/Battle.Play -- goblin-camp                   # adds the Beastmaster and its Snuffler
+dotnet run --project src/Battle.Play -- goblin-camp-tier2             # the camp again, with the Elderwood at Tier 2
+dotnet run --project src/Battle.Play -- goblin-camp --timing ask      # you grade each action command and guard yourself
+```
+
+You play the hero and the Loper; the goblins use their scripts. Type `?` in a battle for the
+commands, `i a` to inspect a goblin (its moves and danger zone), `d` for every enemy's danger zone.
+`river-crossing` is the small test fight from the plan.
+
+Every rule and number in M1 that the design doc doesn't settle is a stand-in, listed in
+`docs/placeholders.md` with the open questions.
+
 ## Layout
 
 | Folder | Language | What it holds |
@@ -20,22 +36,42 @@ M1's question is: **are the fights interesting decisions?**
 | `tests/Battle.Tests` | C# | Rule tests, golden replays, determinism checks and fuzzing. |
 | `viewer/` | Python | The replay viewer. It reads logs only, so change it freely. |
 | `content/` | CSV, JSON, text | Everything you can rebalance without touching code. |
+| `analysis/` | R | `summary.R`: tables and charts from the simulator's logs. |
+| `bench/` | CSV | Benchmark results, one row per run, kept to follow speed between steps and machines. |
+| `docs/` | Markdown | `placeholders.md`: every stand-in rule and number, and the open questions. |
 | `scripts/` | shell | `check.sh` / `check.ps1`: build, test and benchmark in one go. |
 
 ## Everyday commands
 
 ```
 scripts/check.sh                                          # build, every test, short benchmark (check.ps1 on Windows)
-dotnet run --project src/Battle.Play -- river-crossing    # play a battle in the terminal
-python viewer/replay.py logs/river-crossing-7.events.csv  # watch a logged battle back
-dotnet run --project src/Battle.Sim -- run river-crossing --battles 100   # simulate; logs and a summary CSV in logs/
-dotnet run --project src/Battle.Sim -- replay logs/river-crossing-1.inputs.jsonl   # check a log replays exactly
-dotnet run --project src/Battle.Sim -- fuzz --battles 5000                # random battles, every invariant checked
-dotnet run --project src/Battle.Sim -- render river-crossing              # draw an arena
+dotnet run --project src/Battle.Play -- first-goblins     # play a battle in the terminal
+python viewer/replay.py logs/first-goblins-7.events.csv   # watch a logged battle back
+dotnet run --project src/Battle.Sim -c Release -- run goblin-camp --battles 100      # simulate; logs and a summary CSV in logs/
+dotnet run --project src/Battle.Sim -c Release -- balance --battles 500              # win rates: every encounter at every timing skill
+dotnet run --project src/Battle.Sim -c Release -- balance goblin-camp --party simple # ...against a naive player instead
+Rscript analysis/summary.R logs                           # tables and charts (logs/summary.pdf) from whatever is in logs/
+dotnet run --project src/Battle.Sim -- replay logs/goblin-camp-1.inputs.jsonl        # check a log replays exactly
+dotnet run --project src/Battle.Sim -c Release -- fuzz --battles 5000                # random battles, every invariant checked
+dotnet run --project src/Battle.Sim -c Release -- bench                              # inputs per second; appends to bench/results.csv
+dotnet run --project src/Battle.Sim -- render goblin-camp                 # draw an arena
 dotnet run --project tests/Battle.Tests -c Release                        # just the tests
 ```
 
-The viewer needs `pip install -r viewer/requirements.txt` once.
+The viewer needs `pip install -r viewer/requirements.txt` once. `summary.R` uses base R only.
+
+## Scripts and the simulated player
+
+The simulator and terminal play need someone to make the choices. Until trained enemies arrive
+(M3), these are hand-written, in `src/Battle.Core/Ai`:
+
+| Script | Plays |
+| --- | --- |
+| `EnemyScripts` | Each goblin type in character (Cutters gang up and headbutt the hero, Plinkers keep their distance and throw dirt, the Beastmaster hangs back and points), the Snuffler by its fixed rules, and any goblin whose nerve breaks runs for the edge. |
+| `PartyBot` | A straightforward simulated player: it tries each attack from each tile on a copy of the battle and takes the best, then spends its bonus action by simple rules. It never Tethers, mounts or swaps the party order, so a real player should do better. |
+| `SimpleScript`, `RandomController` | Baselines: hit the weakest thing in reach, or pick at random (for fuzzing). |
+
+Pick them with `--party` and `--enemies`: `scripted` (the default), `simple` or `random`.
 
 ## Logs
 
@@ -60,4 +96,6 @@ and review the diff.
 5. Weapon moves, weight classes, collisions, falling and no ground. **Done.**
 6. Features and sources, then the Elderwood's Tiers 1 and 2. **Done.**
 7. The Loper, including mounting. **Done.**
-8. The four goblin types, the batch runner and the first real benchmark.
+8. The four goblin types and their scripts, the balance runner, the R summary and the first real benchmark. **Done.**
+
+M1's build is complete. Next is M2: the Godot battle with real timing.

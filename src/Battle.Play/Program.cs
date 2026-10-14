@@ -35,7 +35,7 @@ public static class Program
             ITimingSource timingSource = timing == "ask" ? new TimingPrompt() : new TimingModel(data, timing, seed);
 
             var session = new Session(contentDir, data, encounter, seed, timingSource);
-            var game = new Game(session, Scripts.For(Side.Enemy), colour, a.Option("pace") ?? "step");
+            var game = new Game(session, Scripts.For(Side.Enemy, seed), colour, a.Option("pace") ?? "step");
             Console.WriteLine($"{encounter} · seed {seed} · timing: {timing}. Type ? for help.");
             game.Play();
 

@@ -109,6 +109,9 @@ public static class AsciiRender
         if (u.Has(UnitFlags.WeaponBind)) parts.Add("weapon bind");
         if (u.Has(UnitFlags.Burrowed)) parts.Add($"burrowed → {u.BurrowTo}");
         if (u.Has(UnitFlags.Fleeing)) parts.Add("fleeing");
+        if (Rules.IsWild(s, i)) parts.Add("wild");
+        else if (u.Order == OrderKind.Unit && u.OrderUnit >= 0) parts.Add($"after {Describe.Name(s, u.OrderUnit)}");
+        else if (u.Order == OrderKind.Tile) parts.Add($"told to dig at {u.OrderTile}");
         if (u.MountedOn >= 0) parts.Add($"riding {Describe.Name(s, u.MountedOn)}");
         for (int t = 0; t < s.TetherCount; t++)
             if (s.Tethers[t].Involves(i)) parts.Add("tethered");

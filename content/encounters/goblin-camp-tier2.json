@@ -1,0 +1,9 @@
+// The goblin camp again, with the Elderwood at Tier 2 (Bind's upgrade, Tether's pull and sap) and Parry
+// instead of Shove, for trying the later kit.
+{
+  "arena": "goblin-camp",
+  "enemies": { "a": "cutter", "b": "cutter", "c": "plinker", "d": "beastmaster", "s": "snuffler" },
+  "handlers": { "s": "d" },
+  "party": { "weapon_main": ["strike", "bull_rush"], "weapon_bonus": "parry", "elderwood_tier": 2 },
+  "first_phase": "party"
+}

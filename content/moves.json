@@ -26,10 +26,71 @@
     "amount": 2,
     "text": "Ready a block: the next melee attack on you before your next turn is blocked, and good timing strikes back for 2."
   },
+  // ---- Goblins: the Cutter ----
   {
     "id": "shiv", "name": "Shiv", "slot": "main", "kind": "melee",
-    "damage": 2,
-    "text": "A rusty stab at a neighbouring enemy."
+    "damage": 2, "gang_up": 1,
+    "text": "A rusty stab at a neighbouring enemy. Gang up: +1 when another goblin is also next to the target."
+  },
+  {
+    "id": "headbutt", "name": "Headbutt", "slot": "special", "kind": "melee",
+    "damage": 1, "gang_up": 1, "status": "dazed", "self_status": "dazed",
+    "text": "Uses the main and bonus action. A headbutt at a neighbouring enemy: it's dazed and loses its next bonus action. The Cutter is dazed too, so it can't Headbutt again next turn."
+  },
+  {
+    "id": "after_you", "name": "After you", "slot": "bonus", "kind": "swap",
+    "text": "Swap places with a neighbouring goblin, putting a mate between yourself and danger."
+  },
+  {
+    "id": "scamper", "name": "Scamper", "slot": "bonus", "kind": "scamper",
+    "amount": 2,
+    "text": "A burst of 2 extra tiles of movement this turn. Every goblin has it."
+  },
+
+  // ---- Goblins: the Plinker ----
+  {
+    "id": "plink", "name": "Plink", "slot": "main", "kind": "ranged",
+    "damage": 1, "range": 4, "height_bonus": true, "needs_sight": true,
+    "text": "A weak shot at an enemy in sight up to 4 tiles away, 1 tile further for each level it stands above the target."
+  },
+  {
+    "id": "pocket_dirt", "name": "Pocket dirt", "slot": "main", "kind": "ranged",
+    "damage": 0, "range": 3, "needs_sight": true, "status": "blinded", "status_rounds": 1,
+    "text": "A thrown fistful of muck: the target is blinded for a round."
+  },
+  {
+    "id": "snap_trap", "name": "Snap trap", "slot": "bonus", "kind": "trap",
+    "range": 3, "damage": 1, "status": "slowed", "status_rounds": 1,
+    "text": "Lob a rusty jaw trap onto a tile up to 3 away. The first unit to step on it takes 1 damage and is slowed. It catches anyone, goblins included. One trap per Plinker."
+  },
+
+  // ---- Goblins: the Beastmaster ----
+  {
+    "id": "lash", "name": "Lash", "slot": "main", "kind": "ranged",
+    "damage": 1, "range": 2, "needs_sight": true,
+    "text": "Crack the whip at an enemy up to 2 tiles away."
+  },
+  {
+    "id": "point", "name": "Point", "slot": "bonus", "kind": "point",
+    "range": 8,
+    "text": "Tell the Snuffler what to do: point at an enemy to have it go and bite them, or at a tile to have it burrow there."
+  },
+  {
+    "id": "whip", "name": "Whip", "slot": "bonus", "kind": "whip",
+    "range": 2, "needs_sight": true, "amount": 1,
+    "text": "Crack the whip at your own Snuffler within 2 tiles: +1 damage on its next attack."
+  },
+
+  // ---- The Snuffler (no mind of its own: it follows its handler's orders) ----
+  {
+    "id": "gnash", "name": "Gnash", "slot": "main", "kind": "melee",
+    "damage": 3,
+    "text": "A strong bite at a neighbouring unit."
+  },
+  {
+    "id": "burrow", "name": "Burrow", "slot": "main", "kind": "burrow",
+    "range": 6, "radius": 1, "damage": 4, "status": "knocked_over",
+    "text": "Dig underground towards a tile up to 6 away; it rumbles until the Snuffler bursts out on its next turn. Everything within 1 tile takes 4 damage and is knocked over, and the ground caves into a crater. A root on the tile catches it."
   },
 
   // ---- The Loper ----

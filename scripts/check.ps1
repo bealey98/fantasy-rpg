@@ -12,5 +12,5 @@ dotnet run --project tests/Battle.Tests -c Release --no-build
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== benchmark"
-dotnet run --project src/Battle.Sim -c Release --no-build -- bench --seconds 3
+dotnet run --project src/Battle.Sim -c Release --no-build -- bench --seconds 3 --no-save
 exit $LASTEXITCODE

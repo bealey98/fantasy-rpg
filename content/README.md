@@ -64,6 +64,13 @@ and the Elderwood's moves for his tier). Everyone else's come from the `moves` c
 One fight: the arena, who each enemy letter is, which goblin handles which beast, the hero's
 loadout and whether the enemies won the first strike. See any of the files for the layout.
 
+| Encounter | Arena | Who |
+| --- | --- | --- |
+| `first-goblins` | `goblin-glade` | Chapter 1's first fight: two Cutters and a Plinker on a rocky rise |
+| `goblin-camp` | `goblin-camp` | The chapter's first bigger fight: adds the Beastmaster and its Snuffler; a lookout reached by ladders |
+| `goblin-camp-tier2` | `goblin-camp` | The same, with the Elderwood at Tier 2 and Parry instead of Shove |
+| `river-crossing` | `river-crossing` | The plan's small test fight: two Cutters |
+
 ## rules.json
 
 Rule numbers that aren't tied to one unit or move. Comments (`// ...`) are allowed, and an unknown

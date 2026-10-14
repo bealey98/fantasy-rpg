@@ -48,8 +48,9 @@ public class FuzzTests
                 for (ulong seed = 1; seed <= 20; seed++)
                 {
                     var state = EncounterLoader.CreateBattle(TestContent.Dir, TestContent.Data, encounter, seed);
-                    new BattleRunner(state, Scripts.For(Side.Party), Scripts.For(Side.Enemy),
+                    new BattleRunner(state, Scripts.For(Side.Party, seed), Scripts.For(Side.Enemy, seed),
                         new TimingModel(TestContent.Data, "average", seed)).Run();
+                    Assert.True(state.Outcome != Outcome.Ongoing, "every battle ends");
                 }
         }
         finally { Invariants.Enabled = was; }

@@ -11,4 +11,4 @@ echo "== tests"
 dotnet run --project tests/Battle.Tests -c Release --no-build
 
 echo "== benchmark"
-dotnet run --project src/Battle.Sim -c Release --no-build -- bench --seconds 3
+dotnet run --project src/Battle.Sim -c Release --no-build -- bench --seconds 3 --no-save

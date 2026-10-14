@@ -49,6 +49,9 @@ public sealed class RulesConfig
     /// <summary>The furthest apart Tether's two ends can be when it's cast.</summary>
     public int TetherMaxLength { get; set; } = 4;
 
+    /// <summary>Goblin morale: the last goblin standing against more than one of the party tries to flee.</summary>
+    public bool FleeEnabled { get; set; } = true;
+
     /// <summary>The bonus or reduction for a timing grade from one of the tables above.</summary>
     public static int ByGrade(int[] table, Timing grade) => grade switch
     {

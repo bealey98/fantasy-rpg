@@ -36,8 +36,12 @@ public static partial class Rules
         }
 
         AddPartyActions(s, actor, output);
-        output.Add(BattleAction.End(actor));
+        if (MayEndTurn(s, actor)) output.Add(BattleAction.End(actor));
     }
+
+    /// <summary>Every turn can end, except an underground unit's: it has to burst out first.</summary>
+    public static bool MayEndTurn(BattleState s, int actor) =>
+        !s.Units[actor].Has(UnitFlags.Burrowed) || s.Units[actor].Has(UnitFlags.MainUsed);
 
     /// <summary>
     /// Is the move usable this turn at all, before thinking about targets? Its action must still be
@@ -46,6 +50,7 @@ public static partial class Rules
     public static bool MoveAvailable(BattleState s, int actor, MoveDef move)
     {
         ref var u = ref s.Units[actor];
+        if (u.Has(UnitFlags.Burrowed)) return move.Kind == MoveKind.Burrow && !u.Has(UnitFlags.MainUsed);
         if (!u.OnBoard) return false;
         if (move.UsesMain && u.Has(UnitFlags.MainUsed)) return false;
         if (move.UsesBonus && u.Has(UnitFlags.BonusUsed)) return false;
@@ -101,6 +106,7 @@ public static partial class Rules
         switch (a.Kind)
         {
             case ActionKind.End:
+                if (!MayEndTurn(s, actor)) throw new IllegalActionException($"{s.Label(actor)} must burst out of the ground first");
                 EndTurn(s);
                 return;
             case ActionKind.Move:
@@ -162,6 +168,9 @@ public static partial class Rules
                 ExecuteKind(s, a, move);
                 break;
         }
+        // Some moves cost their user too: the Cutter's Headbutt dazes the Cutter.
+        if (move.SelfStatus != StatusId.None && s.Units[a.Actor].Alive)
+            ApplyStatus(s, a.Actor, a.Actor, move.SelfStatus, move.SelfStatusRounds, move.Index);
     }
 
     private static void SwapOrder(BattleState s, int actor)

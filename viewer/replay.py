@@ -133,6 +133,8 @@ class Board:
         elif kind in ("death", "fled", "knocked_out") and target:
             target["alive"] = False
             target["on_board"] = False
+            if kind == "fled":
+                target["statuses"] = {"fled": 1}
             if "carrying" in target:
                 rider = self.units.get(target.pop("carrying"))
                 if rider:
@@ -141,6 +143,8 @@ class Board:
                 mount = self.units.get(target.pop("riding"))
                 if mount:
                     mount.pop("carrying", None)
+        elif kind == "flee_start" and target:
+            target["statuses"]["fleeing"] = 1
         elif kind == "status" and target:
             target["statuses"][e["detail"]] = int(e["amount"]) or 1
         elif kind == "status_end" and target:
