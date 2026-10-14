@@ -40,7 +40,7 @@ public static class AsciiRender
     /// pair shows as H), traps as ^, rumbling ground as !, and dead features dimmed.
     /// <paramref name="marked"/> highlights tiles: reachable tiles or a danger zone.
     /// </summary>
-    public static string Board(BattleState s, bool[]? marked, bool colour, string[]? sidePanel = null)
+    public static string Board(BattleState s, bool[]? marked, bool colour, string[]? sidePanel = null, bool heights = true)
     {
         var cells = new Cell[s.TileCount];
         for (int i = 0; i < cells.Length; i++)
@@ -65,7 +65,17 @@ public static class AsciiRender
             else glyph = s.TerrainAt(i).Glyph;
             cells[i] = new Cell(glyph, s.Heights[i], colour || Ansi.Enabled ? fg : null, marked != null && marked[i]);
         }
-        return Grid(s.Width, s.Height, cells, colour, sidePanel);
+        return Grid(s.Width, s.Height, cells, colour, sidePanel, heights);
+    }
+
+    /// <summary>The heights on their own, as a grid: 0 no ground, 1 low, 2 base, 3 high, 4 very high.</summary>
+    public static string Heights(BattleState s)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("    " + string.Join(" ", Enumerable.Range(0, s.Width).Select(x => (x % 10).ToString())));
+        for (int y = 0; y < s.Height; y++)
+            sb.AppendLine(y.ToString().PadLeft(2) + "  " + string.Join(" ", Enumerable.Range(0, s.Width).Select(x => s.Heights[y * s.Width + x])));
+        return sb.ToString();
     }
 
     public static char UnitGlyph(BattleState s, int unit) =>
@@ -122,16 +132,18 @@ public static class AsciiRender
 
     /// <summary>
     /// The board itself, with column and row numbers. Without colour, heights are printed as a
-    /// second grid to the right; with colour, each tile's background is shaded by height.
+    /// second grid to the right (unless <paramref name="heights"/> is off, for narrow screens);
+    /// with colour, each tile's background is shaded by height.
     /// </summary>
-    public static string Grid(int width, int height, Cell[] cells, bool colour, string[]? sidePanel = null)
+    public static string Grid(int width, int height, Cell[] cells, bool colour, string[]? sidePanel = null, bool heights = true)
     {
+        bool heightGrid = !colour && heights;
         // Every board line has the same visible width, so the side panel lines up.
-        int boardWidth = colour ? 4 + 2 * width : 4 + (2 * width - 1) + 6 + (2 * width - 1);
+        int boardWidth = colour ? 4 + 2 * width : 4 + (2 * width - 1) + (heightGrid ? 6 + (2 * width - 1) : 0);
         var lines = new List<(string Text, int Visible)>();
 
         string columns = string.Join(" ", Enumerable.Range(0, width).Select(x => (x % 10).ToString()));
-        string head = "    " + columns + (colour ? "" : "      " + string.Join(" ", Enumerable.Range(0, width).Select(x => (x % 10).ToString())));
+        string head = "    " + columns + (heightGrid ? "      " + string.Join(" ", Enumerable.Range(0, width).Select(x => (x % 10).ToString())) : "");
         lines.Add((head, head.Length));
 
         for (int y = 0; y < height; y++)
@@ -155,7 +167,7 @@ public static class AsciiRender
                     if (x < width - 1) sb.Append(' ');
                 }
             }
-            if (!colour)
+            if (heightGrid)
             {
                 sb.Append("      ");
                 for (int x = 0; x < width; x++)

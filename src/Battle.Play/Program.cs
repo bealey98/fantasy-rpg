@@ -10,6 +10,10 @@ namespace Battle.Play;
 /// it in the viewer afterwards.
 ///
 ///   dotnet run --project src/Battle.Play -- first-goblins [--seed 7] [--timing ask] [--no-color]
+///
+/// Or play by message, one exchange per run, for playing from a phone through a chat: the moves
+/// file keeps every accepted command, and the same seed rebuilds the same battle each time.
+///   dotnet run --project src/Battle.Play -- first-goblins --seed 7 --moves game.txt --play "m 3 5; 1 a"
 /// </summary>
 public static class Program
 {
@@ -26,6 +30,7 @@ public static class Program
             if (encounter == null || a.Flag("help"))
             {
                 Console.WriteLine("usage: battle-play <encounter> [--seed N] [--timing average|novice|expert|ask] [--pace step|fast] [--no-color]");
+                Console.WriteLine("       battle-play <encounter> --seed N --moves FILE [--play \"commands; ...\"]   (play by message)");
                 Console.WriteLine("encounters: " + string.Join(", ", EncounterLoader.All(contentDir)));
                 return encounter == null ? 1 : 0;
             }
@@ -38,6 +43,14 @@ public static class Program
 
             var session = new Session(contentDir, data, encounter, seed, timingSource);
             var game = new Game(session, Scripts.For(Side.Enemy, seed), colour, a.Option("pace") ?? "step");
+            if (a.Option("moves") is string movesPath)
+            {
+                // Play by message: replay the moves file, apply --play's commands, print, and stop.
+                Ansi.Enabled = false;
+                game.PlayByMessage(movesPath, a.Option("play"));
+                session.Save("human", "scripted", timing);
+                return 0;
+            }
             Console.WriteLine($"{encounter} · seed {seed} · timing: {timing}. Type ? for help.");
             game.Play();
 
