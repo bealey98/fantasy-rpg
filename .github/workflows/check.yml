@@ -1,0 +1,19 @@
+# Builds everything and runs every test on each push and pull request.
+name: check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build
+        run: dotnet build Battle.sln -c Release --nologo
+      - name: Tests
+        run: dotnet run --project tests/Battle.Tests -c Release --no-build
