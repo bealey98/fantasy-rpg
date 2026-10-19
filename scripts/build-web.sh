@@ -2,7 +2,7 @@
 # Builds the phone version into dist/web:
 #   index.html   the page, ready to open from any web server
 #   page.html    the same page without the document wrapper, for publishing as a Claude artifact
-#   app.js and _framework/   the page's code and the battle engine (WebAssembly)
+#   app.js and engine/   the page's code and the battle engine (WebAssembly)
 # Run from anywhere:  scripts/build-web.sh   then try it with:  python3 -m http.server -d dist/web
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -16,9 +16,11 @@ dotnet publish src/Battle.Web/Battle.Web.csproj -c Release -o "$publish" --nolog
 
 echo "== assembling $out"
 rm -rf "$out"
-mkdir -p "$out/_framework"
+mkdir -p "$out/engine"
 # Only what the browser loads: no precompressed copies (most hosts can't serve them) and no debug symbols.
-find "$publish/wwwroot/_framework" -maxdepth 1 -type f ! -name '*.br' ! -name '*.gz' ! -name '*.pdb' -exec cp {} "$out/_framework/" \;
+# The folder is renamed from .NET's _framework, because Claude's artifact host keeps names starting
+# with "_" for itself. The runtime finds everything next to dotnet.js, so the name doesn't matter.
+find "$publish/wwwroot/_framework" -maxdepth 1 -type f ! -name '*.br' ! -name '*.gz' ! -name '*.pdb' -exec cp {} "$out/engine/" \;
 cp src/Battle.Web/wwwroot/app.js src/Battle.Web/wwwroot/page.html "$out/"
 # The same wrapper the artifact host puts around a page, so both look alike.
 {

@@ -111,7 +111,7 @@ addEventListener('securitypolicyviolation', (e) => {
 });
 
 async function loadEngine() {
-  const { dotnet } = await import('./_framework/dotnet.js');
+  const { dotnet } = await import('./engine/dotnet.js');
   const runtime = await dotnet
     .withModuleConfig({ onDownloadResourceProgress: (done, total) => { $('load-bar').style.width = `${total ? Math.round((100 * done) / total) : 0}%`; } })
     .create();

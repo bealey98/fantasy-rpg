@@ -4,7 +4,7 @@
 // through each battle its log is resumed and checked to rebuild exactly the same battle.
 //
 //   scripts/build-web.sh && node tests/web/smoke.mjs [battles per encounter and timing, default 3]
-import { dotnet } from '../../dist/web/_framework/dotnet.js';
+import { dotnet } from '../../dist/web/engine/dotnet.js';
 
 const runtime = await dotnet.create();
 const api = (await runtime.getAssemblyExports('Battle.Web.dll')).Battle.Web.Api;
