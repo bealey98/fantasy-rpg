@@ -1,0 +1,20 @@
+<!--
+  Battle.Web: the battle running in a web page, for playing on a phone.
+  The core, the content and the goblin scripts compile to WebAssembly, so the page plays by exactly
+  the same rules as the terminal game. The page itself (wwwroot) draws the board and sends taps.
+  Build the site with scripts/build-web.sh.
+-->
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Battle.Web</RootNamespace>
+    <!-- The generated JavaScript interop code needs it. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Battle.Core\Battle.Core.csproj" />
+    <ProjectReference Include="..\Battle.Content\Battle.Content.csproj" />
+    <!-- The content folder travels inside the program and is unpacked into its in-memory file system. -->
+    <EmbeddedResource Include="..\..\content\**\*" Exclude="..\..\content\**\*.md" LogicalName="content/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>
