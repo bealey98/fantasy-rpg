@@ -1,4 +1,5 @@
-# Builds everything and runs every test on each push and pull request.
+# Builds everything and runs every test on each push and pull request, then builds the phone
+# version and plays a few battles in it. The built phone version is kept as a download.
 name: check
 
 on:
@@ -13,7 +14,18 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Build
         run: dotnet build Battle.sln -c Release --nologo
       - name: Tests
         run: dotnet run --project tests/Battle.Tests -c Release --no-build
+      - name: Build the phone version
+        run: scripts/build-web.sh
+      - name: Play battles in the phone version
+        run: node tests/web/smoke.mjs 3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phone-version
+          path: dist/web

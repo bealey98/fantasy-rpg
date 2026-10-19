@@ -25,6 +25,21 @@ like, until one of them ends its turn. With the whole party on the arena's edge 
 (its moves and danger zone), `d` for every enemy's danger zone. `river-crossing` is the small test
 fight from the plan.
 
+### On a phone
+
+The phone version is a web page that runs this same battle core, compiled to WebAssembly, with
+the same goblin scripts and timing model as the terminal game. A battle played there replays
+exactly in `battle-sim replay`. It saves the battle in progress in the browser, so a reload carries
+on where it was, and "Copy the battle log" in its menu gives the input log to send to Claude.
+
+```
+scripts/build-web.sh                      # builds it into dist/web
+python3 -m http.server -d dist/web        # then open http://localhost:8000 (any static web server will do)
+```
+
+Every push to GitHub builds it too: the "check" run keeps it as a download called phone-version.
+Opened as a Claude artifact, it also saves each battle where Claude can read it back.
+
 The rules M1 needed beyond the design doc are listed in the doc's M1 audit tab, all of them now
 decided. `docs/placeholders.md` lists what's still a stand-in: every number.
 
@@ -36,13 +51,15 @@ decided. `docs/placeholders.md` lists what's still a stand-in: every number.
 | `src/Battle.Content` | C# | Content files in (arenas, units, moves, rules) and log files out. |
 | `src/Battle.Sim` | C# | The command-line simulator: batches, logs, arena renders and the benchmark. |
 | `src/Battle.Play` | C# | Play a battle in the terminal by picking from the legal actions. |
+| `src/Battle.Web` | C#, JavaScript | The phone version: the core compiled to WebAssembly, and the page that draws it (`wwwroot`). |
 | `tests/Battle.Tests` | C# | Rule tests, golden replays, determinism checks and fuzzing. |
+| `tests/web` | JavaScript | `smoke.mjs`: plays battles in the built phone version, without a browser. |
 | `viewer/` | Python | The replay viewer. It reads logs only, so change it freely. |
 | `content/` | CSV, JSON, text | Everything you can rebalance without touching code. |
 | `analysis/` | R | `summary.R`: tables and charts from the simulator's logs. |
 | `bench/` | CSV | Benchmark results, one row per run, kept to follow speed between steps and machines. |
 | `docs/` | Markdown | `placeholders.md`: every stand-in rule and number, and the open questions. |
-| `scripts/` | shell | `check.sh` / `check.ps1`: build, test and benchmark in one go. |
+| `scripts/` | shell | `check.sh` / `check.ps1`: build, test and benchmark in one go. `build-web.sh`: build the phone version. |
 
 ## Everyday commands
 
@@ -59,6 +76,7 @@ dotnet run --project src/Battle.Sim -c Release -- fuzz --battles 5000           
 dotnet run --project src/Battle.Sim -c Release -- bench                              # inputs per second; appends to bench/results.csv
 dotnet run --project src/Battle.Sim -- render goblin-camp                 # draw an arena
 dotnet run --project tests/Battle.Tests -c Release                        # just the tests
+scripts/build-web.sh && node tests/web/smoke.mjs                         # build the phone version and play battles in it
 ```
 
 The viewer needs `pip install -r viewer/requirements.txt` once. `summary.R` uses base R only.

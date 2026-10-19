@@ -19,6 +19,14 @@ internal static class Views
     {
         w.WriteString("rules", RulesVersion.Current);
         w.WriteString("content", data.ContentHash);
+        WriteInts(w, "attackBonus", data.Rules.AttackBonus);
+        WriteInts(w, "guardReduction", data.Rules.GuardReduction);
+        w.WriteStartArray("terrain");
+        foreach (var t in data.Terrain) w.WriteStringValue(t.Id);
+        w.WriteEndArray();
+        w.WriteStartArray("features");
+        foreach (var f in data.Features) w.WriteStringValue(f.Id);
+        w.WriteEndArray();
         w.WriteStartArray("skills");
         foreach (var (name, chances) in data.Rules.TimingSkill)
         {
@@ -44,6 +52,22 @@ internal static class Views
             w.WriteStartArray("enemies");
             foreach (var (_, unit) in encounter.Enemies.OrderBy(e => e.Key)) w.WriteStringValue(data.Unit(unit).Name);
             w.WriteEndArray();
+            // The arena as it starts, for the little map on the encounter's card.
+            w.WriteStartObject("map");
+            WriteInts(w, "height", arena.Heights.Select(h => (int)h));
+            WriteInts(w, "terrain", arena.Terrain.Select(t => (int)t));
+            WriteInts(w, "feature", arena.Features.Select(f => (int)f));
+            w.WriteStartArray("units");
+            foreach (var u in arena.Units)
+            {
+                w.WriteStartArray();
+                w.WriteStringValue(u.Glyph.ToString());
+                w.WriteNumberValue(u.Pos.X);
+                w.WriteNumberValue(u.Pos.Y);
+                w.WriteEndArray();
+            }
+            w.WriteEndArray();
+            w.WriteEndObject();
             w.WriteEndObject();
         }
         w.WriteEndArray();

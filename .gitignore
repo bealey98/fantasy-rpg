@@ -17,3 +17,6 @@ __pycache__/
 # R
 .Rhistory
 .RData
+
+# The built phone version (scripts/build-web.sh)
+dist/
